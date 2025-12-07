@@ -1,0 +1,54 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+% Simple color scheme
+\definecolor{sectiongray}{RGB}{60,60,60}
+\definecolor{nameblue}{RGB}{20,60,140}
+
+\pagestyle{empty}
+
+\begin{document}
+
+% Name + contact
+{\huge\textbf{\textcolor{nameblue}{Mehmet Cagri Ekici}}}\\[4pt]
+\texttt{mehmetcagriekici@gmail.com} \textbar{} (536) 477-1789 \textbar{} Ankara, Turkey \href{https://github.com/mehmetcagriekici}{Visit Github Profile} \textbar{} LinkedIn: mehmetcagriekici
+
+\vspace{0.5cm}
+
+% About me
+{\large\textbf{\textcolor{sectiongray}{About Me}}}\\[-0.2cm]
+\noindent
+I started programming in college with JavaScript, focusing on frontend development. As the market shifted toward highly specialized frontend roles, I realized I was more interested in solving backend problems than doing visual design, so I transitioned to backend development. Since then, I’ve been following the Boot.dev curriculum and built a Python project that finds similarities in text using sentence transformers, and a Go capstone project that fetches financial assets and analyzes them to identify outliers.  
+
+\vspace{0.4cm}
+
+% Skills
+{\large\textbf{\textcolor{sectiongray}{Skills}}}\\[-0.2cm]
+\begin{itemize}[leftmargin=*]
+\item Languages: Go, Python, C, JavaScript, SQL
+\item Tools: Git, Docker, RabbitMQ
+\item Databases: PostgreSQL
+\end{itemize}
+
+\vspace{0.4cm}
+
+% Projects
+{\large\textbf{\textcolor{sectiongray}{Projects}}}\\[-0.2cm]
+\textbf{BlightSanest} \hfill \textit{Go, RabbitMQ, Docker}\\
+I started building BlightSanest as the Boot.dev capstone project but it turned into something I will never stop building. It's a CLI financial analysis program, I built it in a way that helps me do something I don't really like -investments- in a way I enjoy -looking into how things change with different parameters-.
+I built this app with two sides, server and client to give users as much as power on the data without being a burden to the 3rd party APIs. So, I chose RabbitMQ to implement a publisher/subscriber architecture and coded the app with Go.
+\href{https://github.com/mehmetcagriekici/blightsanest}{Visit Github Repo}
+
+\vspace{0.4cm}
+
+% Education
+{\large\textbf{\textcolor{sectiongray}{Education}}}\\[-0.2cm]
+\textbf{Online Course}, Boot.dev \hfill Since July 2025 (I plan to use this platform all the time)
+\href{https://www.boot.dev/u/periodicstandard04}{Visit Boot.dev Profile}
+I've been using Boot.dev to learn backend development since July 2025. So far, I have finished 20 courses and 2 personal projects.
+
+\end{document}
