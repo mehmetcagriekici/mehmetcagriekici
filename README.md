@@ -11,9 +11,10 @@ I am Cagri (call) and I am a learner.
 - C
 - Python
 - Go
+- SQL
 
 ## I Carry:
 - RabbitMQ
 - Docker
 - Git
-- SQL
+- PostgreSQL
