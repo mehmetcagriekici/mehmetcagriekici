@@ -53,7 +53,5 @@ My name means "the Call" - so don't hesitate to reach out!
 ---
 
 <div align="center">
-  
 ![Çağrı's GitHub Stats](https://github-readme-stats.vercel.app/api?username=mehmetcagriekici&show_icons=true&theme=tokyonight)
-
 </div>
