@@ -1,54 +1,79 @@
-\documentclass[11pt]{article}
-
-\usepackage[margin=1in]{geometry}
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=0.85in]{geometry}
 \usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{hyperref}
+\usepackage{fontawesome5}
+\usepackage{parskip}
 
-% Simple color scheme
-\definecolor{sectiongray}{RGB}{60,60,60}
-\definecolor{nameblue}{RGB}{20,60,140}
+% Colors
+\definecolor{heading}{RGB}{0,70,150}
+\definecolor{accent}{RGB}{0,90,180}
 
+\hypersetup{colorlinks=true, urlcolor=accent}
 \pagestyle{empty}
+\setlength\parindent{0pt}
+\setlist[itemize]{leftmargin=*, nosep, topsep=4pt}
 
-\begin{document}
+  \begin{document}
 
-% Name + contact
-{\huge\textbf{\textcolor{nameblue}{Mehmet Cagri Ekici}}}\\[4pt]
-\texttt{mehmetcagriekici@gmail.com} \textbar{} (536) 477-1789 \textbar{} Ankara, Turkey \href{https://github.com/mehmetcagriekici}{Visit Github Profile} \textbar{} LinkedIn: mehmetcagriekici
+  % ==================== HEADER ====================
+  {\Huge\bfseries\textcolor{heading}{Mehmet Çağrı Ekici}}
+  \vspace{8pt}
 
-\vspace{0.5cm}
+  \begin{itemize}[leftmargin=1.5em]
+  \item \faEnvelope\, \href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com}
+  \item \faPhone\, +90 536 477 17 89
+  \item \faMapMarker\, Ankara, Turkey
+  \item \faGithub\, \href{https://github.com/mehmetcagriekici}{Github/mehmetcagriekici}
+  \item \faLinkedin\, \href{https://www.linkedin.com/in/mehmetcagriekici}{LinkedIn/mehmetcagriekici}
+  \end{itemize}
 
-% About me
-{\large\textbf{\textcolor{sectiongray}{About Me}}}\\[-0.2cm]
-\noindent
-I started programming in college with JavaScript, focusing on frontend development. As the market shifted toward highly specialized frontend roles, I realized I was more interested in solving backend problems than doing visual design, so I transitioned to backend development. Since then, I’ve been following the Boot.dev curriculum and built a Python project that finds similarities in text using sentence transformers, and a Go capstone project that fetches financial assets and analyzes them to identify outliers.  
+  \vspace{0.6cm}
 
-\vspace{0.4cm}
+  % ==================== ABOUT ME ====================
+  {\LARGE\bfseries\textcolor{heading}{About Me}}\vspace{6pt}
+  \hrule height 0.8pt
+  \vspace{6pt} 
 
-% Skills
-{\large\textbf{\textcolor{sectiongray}{Skills}}}\\[-0.2cm]
-\begin{itemize}[leftmargin=*]
-\item Languages: Go, Python, C, JavaScript, SQL
-\item Tools: Git, Docker, RabbitMQ
-\item Databases: PostgreSQL
-\end{itemize}
+  I started programming in college with JavaScript, focusing on frontend development. As the market shifted toward highly specialized frontend roles, I realized I was more interested in solving backend problems than doing visual design, so I transitioned to backend development. Since then, I’ve been following the Boot.dev curriculum and built a Python project that finds similarities in text using sentence transformers, and a Go capstone project that fetches financial assets and analyzes them to identify outliers.
 
-\vspace{0.4cm}
+  \vspace{0.8cm}
 
-% Projects
-{\large\textbf{\textcolor{sectiongray}{Projects}}}\\[-0.2cm]
-\textbf{BlightSanest} \hfill \textit{Go, RabbitMQ, Docker}\\
-I started building BlightSanest as the Boot.dev capstone project but it turned into something I will never stop building. It's a CLI financial analysis program, I built it in a way that helps me do something I don't really like -investments- in a way I enjoy -looking into how things change with different parameters-.
-I built this app with two sides, server and client to give users as much as power on the data without being a burden to the 3rd party APIs. So, I chose RabbitMQ to implement a publisher/subscriber architecture and coded the app with Go.
-\href{https://github.com/mehmetcagriekici/blightsanest}{Visit Github Repo}
+  % ==================== SKILLS ====================
+  {\LARGE\bfseries\textcolor{heading}{Skills}}\vspace{6pt}
+  \hrule height 0.8pt
+  \vspace{8pt}
 
-\vspace{0.4cm}
+  \begin{itemize}
+  \item Languages: Go, Python, C, JavaScript, SQL
+  \item Tools: Git, Docker, RabbitMQ
+  \item Databases: PostgreSQL
+  \end{itemize}
 
-% Education
-{\large\textbf{\textcolor{sectiongray}{Education}}}\\[-0.2cm]
-\textbf{Online Course}, Boot.dev \hfill Since July 2025 (I plan to use this platform all the time)
-\href{https://www.boot.dev/u/periodicstandard04}{Visit Boot.dev Profile}
-I've been using Boot.dev to learn backend development since July 2025. So far, I have finished 20 courses and 2 personal projects.
+  \vspace{0.6cm}
 
-\end{document}
+  % ==================== PROJECTS ====================
+  {\LARGE\bfseries\textcolor{heading}{Projects}}\vspace{6pt}
+  \hrule height 0.8pt
+  \vspace{6pt}
+
+  \textbf{BlightSanest} \hfill \textit{Go, RabbitMQ, Docker}\\[8pt]
+  I started building BlightSanest as the Boot.dev capstone project but it turned into something I will never stop building. It's a CLI financial analysis program, I built it in a way that helps me do something I don't really like -investments- in a way I enjoy -looking into how things change with different parameters-.\\
+  I built this app with two sides, server and client to give users as much as power on the data without being a burden to the 3rd party APIs. So, I chose RabbitMQ to implement a publisher/subscriber architecture and coded the app with Go.\\
+  \vspace{4pt}
+  \faGithub\, \href{https://github.com/mehmetcagriekici/blightsanest}{Visit Github Repo}
+
+  \vspace{0.6cm}
+
+  % ==================== EDUCATION ====================
+  {\LARGE\bfseries\textcolor{heading}{Education}}\vspace{6pt}
+  \hrule height 0.8pt
+  \vspace{6pt}
+
+  \textbf{Online Course}, Boot.dev \hfill Since July 2025 \\[6pt]
+  I've been using Boot.dev to learn backend development since July 2025. So far, I have finished 20 courses and 2 personal projects.\\
+  \vspace{4pt}
+  \href{https://www.boot.dev/u/periodicstandard04}{Visit Boot.dev Profile}
+
+  \end{document}
