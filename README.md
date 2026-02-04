@@ -8,7 +8,7 @@
 
 I'm Çağrı, from Turkey, where my name literally means "the call". Since July 2025, I've been answering that call through backend development. I believe the best projects are born from frustration - I build solutions for tasks I don't enjoy, transforming them into problems worth solving. Boot.dev is where I sharpen my craft.
 
-<p align="left">
+<p align="center">
   <img src="https://api.boot.dev/v1/users/public/56f7c1f9-9ab7-4a63-9ba4-bd75de2ae038/thumbnail" >
 </p>
 
