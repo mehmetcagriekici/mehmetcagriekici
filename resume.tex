@@ -1,9 +1,9 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=0.85in]{geometry}
-\usepackage{xcolor}
+\usepackage{xcolor}                
 \usepackage{enumitem}
 \usepackage{hyperref}
-\usepackage{fontawesome5}
+\usepackage{fontawesome5}          
 \usepackage{parskip}
 
 % Colors
@@ -15,65 +15,86 @@
 \setlength\parindent{0pt}
 \setlist[itemize]{leftmargin=*, nosep, topsep=4pt}
 
-  \begin{document}
+\begin{document}
 
-  % ==================== HEADER ====================
-  {\Huge\bfseries\textcolor{heading}{Mehmet Çağrı Ekici}}
-  \vspace{8pt}
+% ==================== HEADER ====================
+{\Huge\bfseries\textcolor{heading}{Mehmet Çağrı Ekici}}
+\vspace{8pt}
 
-  \begin{itemize}[leftmargin=1.5em]
-  \item \faEnvelope\, \href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com}
-  \item \faPhone\, +90 536 477 17 89
-  \item \faMapMarker\, Ankara, Turkey
-  \item \faGithub\, \href{https://github.com/mehmetcagriekici}{Github/mehmetcagriekici}
-  \item \faLinkedin\, \href{https://www.linkedin.com/in/mehmetcagriekici}{LinkedIn/mehmetcagriekici}
-  \end{itemize}
+\begin{itemize}[leftmargin=1.5em]
+\item \faEnvelope\, \href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com}
+\item \faPhone\, +90 536 477 17 89
+\item \faMapMarker\, Ankara, Turkey
+\item \faGithub\, \href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici}
+\item \faLinkedin\, \href{https://www.linkedin.com/in/mehmetcagriekici}{linkedin.com/in/mehmetcagriekici}
+\end{itemize}
 
-  \vspace{0.6cm}
+\vspace{0.6cm}
 
-  % ==================== ABOUT ME ====================
-  {\LARGE\bfseries\textcolor{heading}{About Me}}\vspace{6pt}
-  \hrule height 0.8pt
-  \vspace{6pt} 
+% ==================== ABOUT ME ====================
+{\LARGE\bfseries\textcolor{heading}{About Me}}\vspace{6pt}
+\hrule height 0.8pt
+\vspace{6pt}
 
-  I started programming in college with JavaScript, focusing on frontend development. As the market shifted toward highly specialized frontend roles, I realized I was more interested in solving backend problems than doing visual design, so I transitioned to backend development. Since then, I’ve been following the Boot.dev curriculum and built a Python project that finds similarities in text using sentence transformers, and a Go capstone project that fetches financial assets and analyzes them to identify outliers.
+Backend developer specializing in Go and Python with hands-on experience building distributed systems, AI-powered APIs, and cloud-native applications.
 
-  \vspace{0.8cm}
+Proficient in pub/sub architecture, RAG pipelines, vector databases, semantic search, and modern backend development practices. Completed Boot.dev's full backend curriculum and actively building production-ready personal projects.
 
-  % ==================== SKILLS ====================
-  {\LARGE\bfseries\textcolor{heading}{Skills}}\vspace{6pt}
-  \hrule height 0.8pt
-  \vspace{8pt}
+\vspace{0.8cm}
 
-  \begin{itemize}
-  \item Languages: Go, Python, C, JavaScript, SQL
-  \item Tools: Git, Docker, RabbitMQ
-  \item Databases: PostgreSQL
-  \end{itemize}
+% ==================== SKILLS ====================
+{\LARGE\bfseries\textcolor{heading}{Skills}}\vspace{6pt}
+\hrule height 0.8pt
+\vspace{8pt}
 
-  \vspace{0.6cm}
+\begin{itemize}
+\item Languages: Go, Python, C, JavaScript, TypeScript, SQL
+\item Tools \& Technologies: Git, Docker, Kubernetes, RabbitMQ, FastAPI, ChromaDB, Sentence Transformers, CI/CD (GitHub Actions), Linux
+\item Databases: PostgreSQL
+\end{itemize}
 
-  % ==================== PROJECTS ====================
-  {\LARGE\bfseries\textcolor{heading}{Projects}}\vspace{6pt}
-  \hrule height 0.8pt
-  \vspace{6pt}
+\vspace{0.6cm}
 
-  \textbf{BlightSanest} \hfill \textit{Go, RabbitMQ, Docker}\\[8pt]
-  I started building BlightSanest as the Boot.dev capstone project but it turned into something I will never stop building. It's a CLI financial analysis program, I built it in a way that helps me do something I don't really like -investments- in a way I enjoy -looking into how things change with different parameters-.\\
-  I built this app with two sides, server and client to give users as much as power on the data without being a burden to the 3rd party APIs. So, I chose RabbitMQ to implement a publisher/subscriber architecture and coded the app with Go.\\
-  \vspace{4pt}
-  \faGithub\, \href{https://github.com/mehmetcagriekici/blightsanest}{Visit Github Repo}
+% ==================== PROJECTS ====================
+{\LARGE\bfseries\textcolor{heading}{Projects}}\vspace{6pt}
+\hrule height 0.8pt
+\vspace{6pt}
 
-  \vspace{0.6cm}
+\textbf{Reargs Similarity API} \hfill \textit{Python, FastAPI, ChromaDB, Sentence Transformers, Gemini LLM}\\[8pt]
+Semantic document analysis API that identifies patterns, redundancies, and similarities in writing (supports .txt, .md, .pdf uploads).
 
-  % ==================== EDUCATION ====================
-  {\LARGE\bfseries\textcolor{heading}{Education}}\vspace{6pt}
-  \hrule height 0.8pt
-  \vspace{6pt}
+\vspace{2pt}
+Features file processing, automatic clustering via vector embeddings, persistent storage in Chroma vector database, natural language querying of similar content, LLM-powered content generation from selected clusters, and collection management (create/delete).
 
-  \textbf{Online Course}, Boot.dev \hfill Since July 2025 \\[6pt]
-  I've been using Boot.dev to learn backend development since July 2025. So far, I have finished 20 courses and 2 personal projects.\\
-  \vspace{4pt}
-  \href{https://www.boot.dev/u/periodicstandard04}{Visit Boot.dev Profile}
+\vspace{2pt}
+Built with FastAPI, includes automated CI pipeline (GitHub Actions) for testing on every push, and fully Dockerized with multi-stage build for production deployment.
 
-  \end{document}
+\vspace{4pt}
+\faGithub\, \href{https://github.com/mehmetcagriekici/reargs}{github.com/mehmetcagriekici/reargs}\\
+\faGlobe\, \href{https://reargs.onrender.com}{Live API Demo}
+
+\vspace{0.6cm}
+
+\textbf{BlightSanest} \hfill \textit{Go, RabbitMQ, Docker, Python, FastAPI, Sentence Transformers, PostgreSQL}\\[8pt]
+CLI financial asset analysis tool built on pub/sub architecture with caching and hybrid search.
+
+\vspace{2pt}
+Core client/server in Go with RabbitMQ for message distribution; integrated semantic search engine (Python/FastAPI) and persistent storage (PostgreSQL). Fetches third-party financial data, caches results to minimize API calls, supports concurrent analysis algorithms, and enables hybrid (keyword + vector) search over stored assets.
+
+\vspace{4pt}
+\faGithub\, \href{https://github.com/mehmetcagriekici/blightsanest}{github.com/mehmetcagriekici/blightsanest}
+
+\vspace{0.6cm}
+
+% ==================== EDUCATION ====================
+{\LARGE\bfseries\textcolor{heading}{Education}}\vspace{6pt}
+\hrule height 0.8pt
+\vspace{6pt}
+
+\textbf{Boot.dev Backend Career Path (Python \& Go)} \hfill 2025 -- Present \\[6pt]
+Completed 29 courses and 12 projects covering Go, Python, SQL, distributed systems, HTTP servers/clients, pub/sub (RabbitMQ), Docker, Kubernetes, CI/CD (GitHub Actions), cryptography, and more.
+
+\vspace{4pt}
+\href{https://www.boot.dev/u/callsower}{Boot.dev Profile: callsower}
+
+\end{document}
