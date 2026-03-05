@@ -67,6 +67,6 @@ Actively progressing on Boot.dev's Backend Career Path (Python & Go).
 		
 Feel free to reach out — whether it's about code, collaboration, or just to say hi.
 
-<div align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=mehmetcagriekici&show_icons=true&theme=transparent&hide_border=true" alt="GitHub Stats" />
-</div>
+<p align="center">
+  <img src="https://api.boot.dev/v1/users/public/56f7c1f9-9ab7-4a63-9ba4-bd75de2ae038/thumbnail" >
+</p>
