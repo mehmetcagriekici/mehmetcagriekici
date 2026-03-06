@@ -40,7 +40,7 @@ Semantic analysis API for writers: detects repetitions, clusters similar content
 - Dockerized with multi-stage build
 - Automated CI pipeline (GitHub Actions)
 		
-[GitHub →](https://github.com/mehmetcagriekici/reargs) • [Live API →](https://reargs.onrender.com) 
+[GitHub →](https://github.com/mehmetcagriekici/reargs) • [Live API →](https://huggingface.co/spaces/mhmtcgrkc/reargs) 
 		
 ### BlightSanest
 Go • RabbitMQ • Docker • Python • FastAPI • PostgreSQL
