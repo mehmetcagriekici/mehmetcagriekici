@@ -20,7 +20,7 @@ And if you'd like to try something I've shipped, [**Reargs**](https://github.com
 
 ## Why I'm writing to you
 
-I'm looking for my first professional backend role — a team where the systems are real, the feedback is honest, and the bar is high. I don't have years of job titles to point to. What I have is a body of work you can read, run, and verify: every claim above links to code or to my [Boot.dev profile](https://www.boot.dev/u/callsower), and my [resume](./resume.pdf) lives right here in this repo.
+I'm looking for my first professional backend role — a team where the systems are real, the feedback is honest, and the bar is high. I don't have years of job titles to point to. What I have is a body of work you can read, run, and verify: every claim above links to code or to my [Boot.dev profile](https://www.boot.dev/u/callsower), and the LaTeX source of my [resume](./resume.tex) lives right here in this repo — reach out and I'll send you the PDF.
 
 If that sounds like someone you'd want on your team, I'd love to talk.
 

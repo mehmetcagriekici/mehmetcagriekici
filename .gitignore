@@ -1,7 +1,9 @@
-# outputs
-.aux
-.log
-.out
-.pdf
-
+# LaTeX build outputs
+*.aux
+*.log
+*.out
 auto/
+
+# PDFs (any case)
+*.pdf
+*.PDF
