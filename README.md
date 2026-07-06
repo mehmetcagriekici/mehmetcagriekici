@@ -2,70 +2,33 @@
   <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm4weWE1dWdvbHI1OXF1dWhlZmk1dnlsMjNmbzFjNW9hOWxqNGZtZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9H279yb0blggo/giphy.gif" width="300"/>
   <h1>Heed the Call</h1>
   <h3>Mehmet Çağrı Ekici — Backend Developer</h3>
-  <p>My name means "the call" in Turkish — and I'm answering it by building reliable, scalable backend systems.</p>
 </div>
-		
-## About Me
-		
-Backend-focused developer specializing in Go and Python. Hands-on experience with distributed systems, pub/sub messaging, vector databases, semantic search/RAG pipelines, and cloud-native tools.
-		
-- Started intensive backend development in July 2025 via Boot.dev's full curriculum
-- Completed 29 courses and 12 projects covering Go, Python, SQL, Docker, Kubernetes, RabbitMQ, CI/CD, cryptography, and more
-- Building production-grade personal projects to solve real problems
-		
-From Ankara, Turkey. Open to opportunities, collaborations, or discussions about backend architecture.
-		
-## Skills
-		
-![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
-![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6B35?style=for-the-badge)
-![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
-		
-## Featured Projects
-		
-### ReArgs Similarity API
-Python • FastAPI • ChromaDB • Sentence Transformers • Gemini LLM
-		
-Semantic analysis API for writers: detects repetitions, clusters similar content, supports .txt/.md/.pdf uploads, natural language queries, LLM-powered generation from clusters, persistent vector storage.
-		
-- Automatic clustering and hybrid search
-- Collection management (create/delete)
-- Dockerized with multi-stage build
-- Automated CI pipeline (GitHub Actions)
-		
-[GitHub →](https://github.com/mehmetcagriekici/reargs) • [Live API →](https://huggingface.co/spaces/mhmtcgrkc/reargs) 
-		
-### BlightSanest
-Go • RabbitMQ • Docker • Python • FastAPI • PostgreSQL
-		
-CLI financial asset analysis tool with pub/sub architecture.
-		
-- Server fetches and caches third-party data, publishes to clients
-- Multiple concurrent analysis algorithms without redundant API calls
-- Hybrid (keyword + vector) search over stored assets
-		
-[GitHub →](https://github.com/mehmetcagriekici/blightsanest)
-		
-More projects on my [GitHub](https://github.com/mehmetcagriekici?tab=repositories).
-		
-## Currently Learning
-		
-Actively progressing on Boot.dev's Backend Career Path (Python & Go).  
-[View my profile →](https://www.boot.dev/u/callsower)
 
-## Let's Connect
-		
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mehmetcagriekici)
-[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:mehmetcagriekici@gmail.com)
-		
-Feel free to reach out — whether it's about code, collaboration, or just to say hi.
+Dear reader,
+
+My name, *Çağrı*, means "the call" in Turkish. Consider this repository my way of answering it — and this README my cover letter to you.
+
+I build backend systems in Go, Python, and TypeScript, with a focus on distributed architecture and AI-powered retrieval. In July 2025 I committed to backend engineering full-time and haven't missed a beat since: I completed Boot.dev's Backend Developer Path **twice** — once in Python/Go, once in TypeScript — solving 2,700+ lessons along the way and holding a top-250 rank on their global leaderboard. At one point I studied 144 days in a row. I'm telling you this not to list badges, but because consistency is the thing I'd most want a teammate to know about me.
+
+## What I've been building
+
+The project that best represents where I'm headed is [**BlightSanest — Stable Insights**](https://github.com/mehmetcagriekici/blightsanest_stable_insights), a privacy-first platform where users store personal data across any domain and query it conversationally through RAG or directly through hybrid search. It's three services — a Go API orchestrator, a Python RAG engine, and a Go pub/sub layer — talking over gRPC, with per-user isolated indexes, BM25 + semantic retrieval fused by Reciprocal Rank Fusion, S3 as the source of truth, a Redis hot cache, and a production design targeting AWS (Aurora, EKS, Bedrock, Cognito). The RAG service is complete; the rest is actively in development, in public.
+
+When I want to know what I can do under pressure, I enter 24-hour hackathons. In HackerRank's Orchestrate series I built an [AI damage-claim verification agent](https://github.com/mehmetcagriekici/hackerrank-orchestrate-june26) — CLIP vision plus a local LLM deciding whether photo evidence supports an insurance claim — and a [RAG support-ticket triage agent](https://github.com/mehmetcagriekici/hackerrank-orchestrate-may26), each end to end within the time limit.
+
+And if you'd like to try something I've shipped, [**Reargs**](https://github.com/mehmetcagriekici/reargs) is a semantic document-analysis API with a [live demo](https://huggingface.co/spaces/mhmtcgrkc/reargs), CI on every push, and a multi-stage Docker build.
+
+## Why I'm writing to you
+
+I'm looking for my first professional backend role — a team where the systems are real, the feedback is honest, and the bar is high. I don't have years of job titles to point to. What I have is a body of work you can read, run, and verify: every claim above links to code or to my [Boot.dev profile](https://www.boot.dev/u/callsower), and my [resume](./resume.pdf) lives right here in this repo.
+
+If that sounds like someone you'd want on your team, I'd love to talk.
+
+Sincerely,
+
+**Mehmet Çağrı Ekici**<br>
+Ankara, Turkey<br>
+[mehmetcagriekici@gmail.com](mailto:mehmetcagriekici@gmail.com) · [LinkedIn](https://www.linkedin.com/in/mehmetcagriekici) · [GitHub](https://github.com/mehmetcagriekici)
 
 <p align="center">
   <img src="https://api.boot.dev/v1/users/public/56f7c1f9-9ab7-4a63-9ba4-bd75de2ae038/thumbnail" >
