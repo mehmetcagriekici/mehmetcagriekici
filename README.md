@@ -8,7 +8,7 @@ Dear reader,
 
 My name, *Çağrı*, means "the call" in Turkish. Consider this repository my way of answering it — and this README my cover letter to you.
 
-I build backend systems in Go, Python, and TypeScript, with a focus on distributed architecture and AI-powered retrieval. In July 2025 I committed to backend engineering full-time and haven't missed a beat since: I completed Boot.dev's Backend Developer Path **twice** — once in Python/Go, once in TypeScript — solving 2,700+ lessons along the way and holding a top-250 rank on their global leaderboard. At one point I studied 144 days in a row. I'm telling you this not to list badges, but because consistency is the thing I'd most want a teammate to know about me.
+I build backend systems in Go, Python, and TypeScript, with a focus on distributed architecture and AI-powered retrieval. In July 2025 I committed to backend engineering full-time and haven't missed a beat since: I completed Boot.dev's Backend Developer Path **twice** — once in Python/Go, once in TypeScript — solving 2,700+ lessons along the way and holding a top-250 rank on their global leaderboard. I'm telling you this not to list badges, but because consistency is the thing I'd most want a teammate to know about me.
 
 ## What I've been building
 
