@@ -1,0 +1,50 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+% ---------- Style (matches resume) ----------
+\definecolor{accent}{RGB}{38,86,166}
+\hypersetup{colorlinks=true,urlcolor=accent}
+\pagestyle{empty}
+\setlength{\parskip}{8pt}
+
+\begin{document}
+
+% ---------- Header ----------
+{\LARGE\bfseries\color{accent} Mehmet Çağrı Ekici}\par
+\vspace{2pt}
+{\small
+\href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com} \,\textbullet\,
++90 536 477 17 89 \,\textbullet\,
+Ankara, Turkey \,\textbullet\,
+\href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici} \,\textbullet\,
+\href{https://linkedin.com/in/mehmetcagriekici}{linkedin.com/in/mehmetcagriekici}
+}
+
+\vspace{10pt}
+\hrule
+\vspace{14pt}
+
+Dear ProVal Team,
+
+I'm applying for the AI Automation Engineer position. Your posting gives ``intelligent ticket triage'' as an example of the AI workflows you want to prototype. I have already built one. In a 24-hour hackathon (HackerRank Orchestrate, May 2026) I built a \href{https://github.com/mehmetcagriekici/hackerrank-orchestrate-may26}{support-ticket triage agent}: it embeds a support corpus with Sentence Transformers, retrieves the relevant documentation for each incoming ticket, and uses an LLM to classify the ticket, route it, draft a grounded response, and escalate anything high-risk instead of guessing. That is not the only one --- a month later I built a \href{https://github.com/mehmetcagriekici/hackerrank-orchestrate-june26}{damage-claim verification agent} combining CLIP vision with a local LLM producing structured, validated decisions.
+
+My background is self-taught, which your posting explicitly welcomes, so here is what that actually looked like: since July 2025 I have been building nearly every day. I completed Boot.dev's Backend Developer Path twice --- once in Python and Go, again in TypeScript --- covering SQL, HTTP servers and clients, REST APIs, pub/sub messaging, Docker, and CI/CD. All of it is verifiable at \href{https://www.boot.dev/u/callsower}{boot.dev/u/callsower}. I write Python and TypeScript daily, I build and consume REST APIs myself, and I have worked with LLM APIs (Gemini), local models through Ollama, and embedding pipelines in real projects, not just tutorials. When something I build works, it gets tests in CI, documentation, and version control, because nobody else is checking my work --- so my pipelines have to.
+
+The builder's mindset you describe is recognizable to me. My projects exist because a repetitive or manual process annoyed me into automating it: my current platform, BlightSanest, exists so that finding things in your own records doesn't depend on memory; my document-analysis API, \href{https://github.com/mehmetcagriekici/reargs}{Reargs}, exists so that spotting redundancy across documents doesn't require rereading them. Seeing a tedious process and immediately sketching the automation is not a trait I would need to develop for this role; it is why the portfolio exists.
+
+Honest gaps: I have no professional experience --- this would be my first role --- and I have not worked with RMM/PSA platforms or PowerShell, which I would be learning from your team exactly as your posting offers. The bigger practical note: I am based in Ankara, Turkey. I am open to relocating, but I would need visa sponsorship to work onsite in Florida. I am raising it in the first paragraph of contact rather than the last one of an interview, because I don't want to cost your team time if that is a hard stop.
+
+If it isn't, I would love to show you how I work. Thank you for your time.
+
+Sincerely,
+
+\textbf{Mehmet Çağrı Ekici}
+
+\end{document}

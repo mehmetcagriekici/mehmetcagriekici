@@ -1,0 +1,52 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+% ---------- Style (matches resume) ----------
+\definecolor{accent}{RGB}{38,86,166}
+\hypersetup{colorlinks=true,urlcolor=accent}
+\pagestyle{empty}
+\setlength{\parskip}{8pt}
+
+\begin{document}
+
+% ---------- Header ----------
+{\LARGE\bfseries\color{accent} Mehmet Çağrı Ekici}\par
+\vspace{2pt}
+{\small
+\href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com} \,\textbullet\,
++90 536 477 17 89 \,\textbullet\,
+Ankara, Turkey \,\textbullet\,
+\href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici} \,\textbullet\,
+\href{https://linkedin.com/in/mehmetcagriekici}{linkedin.com/in/mehmetcagriekici}
+}
+
+\vspace{10pt}
+\hrule
+\vspace{14pt}
+
+Dear Antrino Labs Team,
+
+I'm applying for the Full Stack Developer position. I'll describe my profile honestly up front: I am a backend-first developer with hands-on React and Next.js experience from side projects, and no professional employment yet. I'm writing anyway because the work you describe --- cameras that understand what they see, in real time --- is unusually close to things I have actually built.
+
+The closest one: in a 24-hour hackathon (HackerRank Orchestrate, June 2026) I built a \href{https://github.com/mehmetcagriekici/hackerrank-orchestrate-june26}{damage-claim verification agent} --- CLIP (clip-ViT-L-14) analyzing images for damage type, severity, and image quality, feeding a local LLM that produces structured, validated verdicts on whether the photos support the claim. It is a small version of your problem: turning raw visual input into a decision a system can act on. Integrating AI into products is not a ``strong advantage'' I hope to develop; it is what my portfolio already does.
+
+On the backend, which is my core: I completed Boot.dev's Backend Developer Path twice (Python/Go, then TypeScript) and have been building nearly every day since July 2025. My current project, \href{https://github.com/mehmetcagriekici/blightsanest_stable_insights}{BlightSanest}, is a multi-service platform --- a Go API, a Python retrieval engine, and a pub/sub layer communicating over gRPC --- with hybrid search, per-user index isolation, PostgreSQL with pgvector, a Redis cache over S3 storage, and a production design targeting AWS. I have also built real-time message distribution with RabbitMQ, and I work daily with Docker, and CI through GitHub Actions. Your platform has to stay fast while thousands of streams flow through it; distributed systems that move data through queues and caches are exactly the problems I choose for myself.
+
+On the frontend: I have built React applications as side projects --- a journaling app in React 18 with TypeScript and Redux Toolkit, and several Next.js apps with React 19 using React Query, Material UI, Tailwind, and Supabase. My frontend is not at the level of my backend, and I won't pretend otherwise, but I can carry a feature from the endpoint to the interface, and I understand both sides of every request.
+
+What I can't offer is years of production experience --- this would be my first professional role. What I can offer is verifiable output at a startup's pace: two 24-hour hackathons finished end to end, a double-completed curriculum (2,700+ exercises, all at \href{https://www.boot.dev/u/callsower}{boot.dev/u/callsower}), and public repositories you can read before the first conversation. I work in English comfortably, written and spoken. One practical note in the same spirit of honesty: I am based in Ankara and open to relocating to Stockholm, but I would need visa sponsorship to do it.
+
+I would love to show your team how I work. Thank you for your time.
+
+Sincerely,
+
+\textbf{Mehmet Çağrı Ekici}
+
+\end{document}
