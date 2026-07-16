@@ -20,7 +20,7 @@
 \titleformat{\section}{\Large\bfseries\color{accent}}{}{0em}{}[\vspace{-6pt}\rule{\textwidth}{0.8pt}]
 \titlespacing*{\section}{0pt}{8pt}{4pt}
 
-\newcommand{\project}[2]{\vspace{3pt}{\textbf{#1}\hfill{\small\itshape #2}}\par\vspace{1pt}}
+\newcommand{\project}[3]{\vspace{3pt}{\textbf{#1} \normalfont\footnotesize(#2)\hfill{\itshape #3}}\par\vspace{1pt}}
 
 \setlist[itemize]{leftmargin=1.1em,itemsep=0.5pt,parsep=0pt,topsep=1pt,label=\textbullet}
 
@@ -29,7 +29,7 @@
 % ---------- Header ----------
 {\huge\bfseries\color{accent} Mehmet Çağrı Ekici}\par
 \vspace{4pt}
-{\small
+{
 \faEnvelope\ \href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com} \quad
 \faPhone\ +90 536 477 17 89 \quad
 \faMapMarker\ Ankara, Turkey\\[2pt]
@@ -49,16 +49,16 @@ multi-service RAG platform, and looking for a team where I can keep building thi
 % ---------- Skills ----------
 \section{Skills}
 \begin{itemize}
-  \item \textbf{Languages:} Go, Python, TypeScript, SQL, C
-  \item \textbf{Backend:} gRPC, REST, FastAPI, Express, RabbitMQ (pub/sub), PostgreSQL (pgvector), Redis, ChromaDB
+  \item \textbf{Languages:} Go, Python, TypeScript
+  \item \textbf{Backend:} gRPC, FastAPI, Express, RabbitMQ (pub/sub), PostgreSQL (pgvector), Redis, ChromaDB
   \item \textbf{AI/ML:} RAG pipelines, hybrid search (BM25 + semantic, RRF), Sentence Transformers, CLIP, LLM integration (Gemini, Ollama, AWS Bedrock)
-  \item \textbf{DevOps:} Docker, Kubernetes, GitHub Actions (CI/CD), AWS (S3, Aurora, EKS, Cognito), Linux, Git
+  \item \textbf{DevOps:} Docker, GitHub Actions (CI/CD), AWS (S3, Aurora, EKS, Cognito)
 \end{itemize}
 
 % ---------- Projects ----------
 \section{Projects}
 
-\project{BlightSanest --- Stable Insights \normalfont(in development)}{Go, Python, gRPC, PostgreSQL/pgvector, Redis, S3, Docker, AWS}
+\project{BlightSanest --- Stable Insights \normalfont(in development)}{May 2026 -- Present}{Go, Python, gRPC, PostgreSQL/pgvector, Redis, S3, Docker, AWS}
 Privacy-first smart journaling platform: users store personal data across any domain and query it conversationally through RAG or directly through hybrid search.
 \begin{itemize}
   \item Architected three services --- Go API orchestrator, Python RAG engine, Go pub/sub --- communicating over gRPC, with per-user isolated indexes for privacy by design.
@@ -67,14 +67,14 @@ Privacy-first smart journaling platform: users store personal data across any do
   \item RAG service phase complete; production design targets Aurora Serverless, EKS, and Cognito with a full Docker Compose local stack. \hfill \href{https://github.com/mehmetcagriekici/blightsanest_stable_insights}{\faGithub\ repo}
 \end{itemize}
 
-\project{AI Damage-Claim Verification Agent}{Python, CLIP, Ollama, Docker}
+\project{AI Damage-Claim Verification Agent}{June 2026}{Python, CLIP, Ollama, Docker}
 24-hour hackathon (HackerRank Orchestrate, June 2026). Multimodal pipeline that decides whether submitted images support, contradict, or insufficiently evidence damage claims across cars, laptops, and packages.
 \begin{itemize}
   \item Combined CLIP (clip-ViT-L-14) image--text similarity for damage type, severity, and image-quality classification with a local Llama 3.2 model (Ollama) producing validated 14-field structured verdicts.
   \item Designed modular agent architecture (vision RAG layer $\rightarrow$ context organizer $\rightarrow$ LLM reasoner) with tunable evidence thresholds calibrated against labeled sample data. \hfill \href{https://github.com/mehmetcagriekici/hackerrank-orchestrate-june26}{\faGithub\ repo}
 \end{itemize}
 
-\project{Reargs Similarity API \normalfont(live demo)}{Python, FastAPI, ChromaDB, Sentence Transformers, Gemini}
+\project{Reargs Similarity API \normalfont(live demo)}{Aug 2025 -- Mar 2026}{Python, FastAPI, ChromaDB, Sentence Transformers, Gemini}
 Semantic document-analysis API that detects patterns, redundancies, and similarities across uploaded documents (.txt, .md, .pdf).
 \begin{itemize}
   \item Automatic clustering via vector embeddings, natural-language querying of similar content, and LLM-powered generation from selected clusters.
@@ -82,7 +82,7 @@ Semantic document-analysis API that detects patterns, redundancies, and similari
 \end{itemize}
 
 \vspace{3pt}
-\textbf{Other projects:} RAG support-ticket triage agent (24-hour hackathon, May 2026; Sentence Transformers + Gemini) \,\textbullet\, Health-records RAG API (TypeScript, Express, openEHR/EHRbase, Ollama) \,\textbullet\, Pub/sub financial-analysis CLI (Go, RabbitMQ, PostgreSQL) --- all at \href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici}
+\textbf{Other projects:} RAG support-ticket triage agent (May 2026; 24-hour hackathon; Sentence Transformers + Gemini) \,\textbullet\, Health-records RAG API (Apr 2026 -- May 2026; TypeScript, Express, openEHR/EHRbase, Ollama) \,\textbullet\, Pub/sub financial-analysis CLI (Nov 2025 -- Feb 2026; Go, RabbitMQ, PostgreSQL) --- all at \href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici}
 
 % ---------- Education ----------
 \section{Training \& Certificates}
