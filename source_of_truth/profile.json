@@ -1,0 +1,126 @@
+{
+  "personal": {
+    "name": "Mehmet Çağrı Ekici",
+    "email": "mehmetcagriekici@gmail.com",
+    "phone": "+90 536 477 17 89",
+    "location": "Ankara, Turkey",
+    "github": "https://github.com/mehmetcagriekici",
+    "linkedin": "https://linkedin.com/in/mehmetcagriekici"
+  },
+
+  "summary": "What keeps me at the keyboard is watching separate pieces — services, queues, retrieval pipelines — come together into something that works. I found backend engineering later than most, recognized it immediately, and went all in: building nearly every day since July 2025, completing Boot.dev's Backend Developer Path twice (once in Python/Go, again in TypeScript) because one pass wasn't enough to satisfy me. Now I'm architecting BlightSanest, a multi-service RAG platform, and looking for a team where I can keep building things like it.",
+
+  "skills": {
+    "languages": ["Go", "Python", "TypeScript"],
+    "backend": ["gRPC", "FastAPI", "Express", "RabbitMQ (pub/sub)", "PostgreSQL (pgvector)", "Redis", "ChromaDB"],
+    "ai_ml": ["RAG pipelines", "hybrid search (BM25 + semantic, RRF)", "Sentence Transformers", "CLIP", "LLM integration (Gemini, Ollama, AWS Bedrock)"],
+    "devops": ["Docker", "GitHub Actions (CI/CD)", "AWS (S3, Aurora, EKS, Cognito)"]
+  },
+
+  "projects": [
+    {
+      "name": "BlightSanest — Stable Insights",
+      "status": "in development",
+      "dates": "May 2026 – Present",
+      "stack": ["Go", "Python", "gRPC", "PostgreSQL/pgvector", "Redis", "S3", "Docker", "AWS"],
+      "description": "Privacy-first smart journaling platform: users store personal data across any domain and query it conversationally through RAG or directly through hybrid search.",
+      "bullets": [
+        "Architected three services — Go API orchestrator, Python RAG engine, Go pub/sub — communicating over gRPC, with per-user isolated indexes for privacy by design.",
+        "Implemented hybrid retrieval: BM25 and semantic embeddings (Sentence Transformers, pgvector) fused with Reciprocal Rank Fusion; Ollama for local LLM, AWS Bedrock in production.",
+        "Built pre-computed indexing pipeline with S3 as source of truth, Redis hot cache with automatic fallback, MessagePack serialization, and Alembic schema migrations.",
+        "RAG service phase complete; production design targets Aurora Serverless, EKS, and Cognito with a full Docker Compose local stack."
+      ],
+      "repo": "github.com/mehmetcagriekici"
+    },
+    {
+      "name": "AI Damage-Claim Verification Agent",
+      "status": "complete (hackathon)",
+      "dates": "June 2026",
+      "stack": ["Python", "CLIP", "Ollama", "Docker"],
+      "description": "24-hour hackathon (HackerRank Orchestrate, June 2026). Multimodal pipeline that decides whether submitted images support, contradict, or insufficiently evidence damage claims across cars, laptops, and packages.",
+      "bullets": [
+        "Combined CLIP (clip-ViT-L-14) image–text similarity for damage type, severity, and image-quality classification with a local Llama 3.2 model (Ollama) producing validated 14-field structured verdicts.",
+        "Designed modular agent architecture (vision RAG layer → context organizer → LLM reasoner) with tunable evidence thresholds calibrated against labeled sample data."
+      ],
+      "repo": "github.com/mehmetcagriekici"
+    },
+    {
+      "name": "Reargs Similarity API",
+      "status": "live demo",
+      "dates": "Aug 2025 – Mar 2026",
+      "stack": ["Python", "FastAPI", "ChromaDB", "Sentence Transformers", "Gemini"],
+      "description": "Semantic document-analysis API that detects patterns, redundancies, and similarities across uploaded documents (.txt, .md, .pdf).",
+      "bullets": [
+        "Automatic clustering via vector embeddings, natural-language querying of similar content, and LLM-powered generation from selected clusters.",
+        "Deployed with a live public demo; GitHub Actions CI runs tests on every push; multi-stage Docker build."
+      ],
+      "repo": "github.com/mehmetcagriekici"
+    },
+    {
+      "name": "RAG support-ticket triage agent",
+      "status": "complete (hackathon)",
+      "dates": "May 2026",
+      "stack": ["Sentence Transformers", "Gemini"],
+      "description": "24-hour hackathon project.",
+      "bullets": [],
+      "repo": "github.com/mehmetcagriekici"
+    },
+    {
+      "name": "Health-records RAG API",
+      "status": "complete",
+      "dates": "Apr 2026 – May 2026",
+      "stack": ["TypeScript", "Express", "openEHR/EHRbase", "Ollama"],
+      "description": null,
+      "bullets": [],
+      "repo": "github.com/mehmetcagriekici"
+    },
+    {
+      "name": "Pub/sub financial-analysis CLI",
+      "status": "complete",
+      "dates": "Nov 2025 – Feb 2026",
+      "stack": ["Go", "RabbitMQ", "PostgreSQL"],
+      "description": null,
+      "bullets": [],
+      "repo": "github.com/mehmetcagriekici"
+    }
+  ],
+
+  "certifications": [
+    {
+      "name": "Boot.dev Backend Developer Path — completed twice",
+      "dates": "2025 – 2026",
+      "details": "Python/Go track (Dec 2025) and TypeScript track (Feb 2026): 30 courses and 12 guided projects covering distributed systems, HTTP servers/clients, pub/sub, RAG, Docker, Kubernetes, CI/CD, and cryptography. 2,723 lessons solved; top-250 leaderboard.",
+      "verification_url": "boot.dev/u/callsower"
+    }
+  ],
+
+  "education": {
+    "institution": "Ankara University",
+    "faculty": "Open Education Faculty (Açıköğretim — distance/open learning)",
+    "program": "Management Information Systems",
+    "status": "in progress — 1st year completed",
+    "gpa": 2.6,
+    "gpa_scale": 4.0,
+    "proof_available": "transcript only, no diploma yet (program ongoing)",
+    "other_degrees": "none"
+  },
+  "work_experience": [],
+  "professional_experience_note": "No paid/professional work experience — looking for first job. Practical evidence comes from personal and hackathon projects (see `projects` above), not employment history.",
+  "years_of_professional_experience": 0,
+
+  "job_preferences": {
+    "salary_range": {"min": 3000, "max": null, "period": "month", "type": "gross"},
+    "currency": "USD",
+    "relocation_willingness": true,
+    "remote_preference": "open to remote/hybrid as well as on-site (with relocation)",
+    "work_authorization": "Turkish citizenship only",
+    "visa_sponsorship_needed": true,
+    "notice_period": "immediate",
+    "language_proficiency": {
+      "Turkish": "native",
+      "English": "fluent (self-assessed, no certified proof level)"
+    }
+  },
+
+  "screening_answers": {}
+}
