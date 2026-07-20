@@ -1,10 +1,10 @@
 # Working conventions for this repo
 
-## Job-application automation project (planning stage)
-- We are designing an automated AI agent to apply to jobs for the user, built inside this folder.
-- **No code.** Do not write, scaffold, or edit any code for this project unless the user explicitly asks for code to be written. Default mode is discussion/design only.
-- Act as a rubber duck: help the user think through the design out loud, ask clarifying questions, poke at assumptions and edge cases — don't jump to solutions or implementation.
-- This constraint applies specifically to the agent-building project itself, not to the existing cover-letter/resume workflow below, which continues as-is.
+## Job-application automation project
+- There's a job-application automation agent being designed (planning stage, no code yet) inside `agent/` — an AI agent that will apply to jobs on the user's behalf.
+- Full context for that project (scope, constraints, design decisions, folder layout) lives in `agent/CLAUDE.md`, not here. There is no `agent/claude_agent.md` — that was an earlier filename, since renamed.
+- **Claude Code sessions running at this level (repo root) do not automatically have access to `agent/CLAUDE.md`.** CLAUDE.md discovery only picks up files in the current directory and its ancestors, not descendant directories — so a session working from the repo root won't see `agent/CLAUDE.md` unless it's read explicitly. (The reverse is also true: a session running inside `agent/` won't automatically see this root file either — see the note in `agent/CLAUDE.md`.)
+- This project does not affect the existing cover-letter/resume workflow below, which continues as-is.
 
 ## Cover letters
 - All cover letters are written to `cover.tex`, always. Don't create per-company files (`cover_letter_<company>.tex`) unless explicitly asked — one file, overwritten each time a new job comes in.

@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(../**)",
+      "Edit(../**)",
+      "Write(../**)",
+      "Read(//home/callsower/mehmetcagriekici/*)",
+      "Edit(//home/callsower/mehmetcagriekici/*)",
+      "Write(//home/callsower/mehmetcagriekici/*)",
+      "Read(//home/callsower/mehmetcagriekici/.claude/**)",
+      "Edit(//home/callsower/mehmetcagriekici/.claude/**)",
+      "Write(//home/callsower/mehmetcagriekici/.claude/**)",
+      "Bash(cd /home/callsower/mehmetcagriekici)",
+      "Bash(cd /home/callsower/mehmetcagriekici/)",
+      "Bash(cat /home/callsower/mehmetcagriekici/*)",
+      "Bash(less /home/callsower/mehmetcagriekici/*)",
+      "Bash(more /home/callsower/mehmetcagriekici/*)",
+      "Bash(head /home/callsower/mehmetcagriekici/*)",
+      "Bash(tail /home/callsower/mehmetcagriekici/*)",
+      "Bash(cp /home/callsower/mehmetcagriekici/*)",
+      "Bash(mv /home/callsower/mehmetcagriekici/*)",
+      "Bash(rm /home/callsower/mehmetcagriekici/*)",
+      "Bash(sed * /home/callsower/mehmetcagriekici/*)",
+      "Bash(vim /home/callsower/mehmetcagriekici/*)",
+      "Bash(vi /home/callsower/mehmetcagriekici/*)",
+      "Bash(nano /home/callsower/mehmetcagriekici/*)",
+      "Bash(python3 /home/callsower/mehmetcagriekici/*)",
+      "Bash(python /home/callsower/mehmetcagriekici/*)",
+      "Bash(node /home/callsower/mehmetcagriekici/*)",
+      "Bash(pdflatex /home/callsower/mehmetcagriekici/*)",
+      "Bash(pdftoppm /home/callsower/mehmetcagriekici/*)",
+      "Bash(pdfinfo /home/callsower/mehmetcagriekici/*)",
+      "Bash(pdffonts /home/callsower/mehmetcagriekici/*)",
+      "Bash(code /home/callsower/mehmetcagriekici/*)",
+      "Bash(open /home/callsower/mehmetcagriekici/*)"
+    ]
+  }
+}
