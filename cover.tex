@@ -1,0 +1,61 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{fontawesome5}
+\usepackage{xcolor}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+
+\definecolor{accent}{RGB}{38,86,166}
+
+\titleformat{\section}{\Large\bfseries\color{accent}}{}{0em}{}[\color{accent}\titlerule]
+\pagestyle{empty}
+
+\begin{document}
+
+{\Huge\bfseries\color{accent} Mehmet Çağrı Ekici}
+
+\vspace{4pt}
+\faEnvelope\ mehmetcagriekici@gmail.com \quad
+\faPhone\ +90 536 477 17 89 \quad
+\faMapMarker\ Ankara, Turkey
+
+\faGithub\ \href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici} \quad
+\faLinkedin\ \href{https://linkedin.com/in/mehmetcagriekici}{linkedin.com/in/mehmetcagriekici}
+
+\vspace{12pt}
+
+\today
+
+\vspace{12pt}
+
+Hiring Team at Saga
+
+\vspace{12pt}
+
+Dear Hiring Team,
+
+I'm writing about the Back-End Engineer role. Saga's angle — technology that strengthens legal reasoning instead of replacing it — is a good fit for the kind of retrieval and RAG systems I've spent the last year building.
+
+My most recent project, BlightSanest, is a multi-service backend (Go API orchestrator, Python RAG engine, Go pub/sub) built around hybrid retrieval: BM25 and semantic embeddings (Sentence Transformers, pgvector) fused with Reciprocal Rank Fusion, Ollama for local inference and AWS Bedrock in production. I've also shipped a TypeScript/Node.js REST API (health-records service, Express) and a document-analysis API with automatic clustering, natural-language querying, and LLM-generated summaries over uploaded documents. The async pipeline work in BlightSanest — a pre-computed indexing job with S3 as source of truth and a Redis cache with fallback — maps directly to the background-processing and long-running-job work in this role.
+
+I want to be direct about where I don't yet match the posting, rather than let you find out later:
+
+\begin{itemize}
+\item \textbf{Professional experience.} The posting asks for 3+ years of professional backend experience with TypeScript and Node.js. I have none — everything above is self-directed work since July 2025, and my TypeScript/Node.js work specifically is one project, not years of depth. Most of my hands-on time has been in Python and Go.
+\item \textbf{Production codebases.} All of my projects are greenfield — built from scratch, not developed inside an existing production codebase alongside other engineers. I haven't yet had to work within someone else's architecture and constraints.
+\item \textbf{LLM providers.} I haven't used OpenAI or Anthropic APIs specifically — my LLM integration experience is with Gemini, Ollama, and AWS Bedrock. The prompt design, RAG orchestration, and evaluation work transfers, but I want to name the specific gap rather than let "LLMs from OpenAI, Anthropic, and Google" pass unchallenged.
+\item \textbf{Degree.} I don't hold a Bachelor's in CS or Engineering. I'm a first-year student in Management Information Systems at Turkey's Open Education Faculty, expected 2029.
+\end{itemize}
+
+If the engineering itself is what matters most to you, I'd welcome the chance to talk it through. Thank you for considering my application.
+
+\vspace{12pt}
+
+Sincerely,\\
+Mehmet Çağrı Ekici
+
+\end{document}
