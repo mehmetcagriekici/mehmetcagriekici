@@ -1,0 +1,186 @@
+{
+  "projects": [
+    {
+      "name": "Pub/sub financial-analysis CLI",
+      "planning_process": "Built incrementally and dev-logged in CHANGELOG.md as needs came up, not planned upfront: started as a plain crypto fetch/filter/rank CLI (README's own stated motivation: \"I did not have time to learn finance but wanted to invest my money as widely as possible\"), then added pub/sub so multiple terminals could work the same data independently, then database persistence, then BM25/semantic search, then containerization and Kubernetes — each stage added because the previous version's limits were actually hit, not from a fixed roadmap.",
+      "structure": "Independent Go binaries (server, client, search, migrate) communicating over RabbitMQ pub/sub rather than direct RPC calls — the server owns fetching/caching from CoinGecko and publishing; each client is its own REPL process with its own local state and filter preferences, so running multiple terminals never means shared mutable state. Search is a separate binary: a custom BM25/inverted-index engine for keyword search, plus calls out to a standalone Python FastAPI microservice for semantic search — kept as its own deployable unit rather than embedded in the Go binary.",
+      "turning_points": [
+        {
+          "title": "Three real crashes found by actually hitting the endpoints",
+          "situation": "The semantic search API had been built and deployed, but hadn't been exercised end-to-end against live requests.",
+          "decision_or_fix": "Testing the actual POST /embeddings and POST /search calls surfaced three separate, unrelated crashes: FastAPI was imported but never declared as a project dependency; the embeddings endpoint indexed a pydantic object with dict-style subscripting instead of attribute access; and the search endpoint used numpy without importing it, then tried to return a raw numpy.float32 that FastAPI can't JSON-encode.",
+          "why": "None of these would show up from reading the code casually or from a successful docker build — they only surface when a real request actually flows through the handler.",
+          "outcome": "Fixed all three; established a habit reflected in later commits of testing endpoints directly before considering a service done, not just confirming it starts."
+        },
+        {
+          "title": "Cutting a Python image from 8.47GB by matching it to the real deployment target",
+          "situation": "The semantic-search service's Docker image was 8.47GB, mostly because the default PyPI torch wheel bundles full CUDA/GPU support.",
+          "decision_or_fix": "The actual deployment target (this local setup) has no GPU, so that CUDA weight was pure overhead. Installed torch from the CPU-only wheel index instead of the default index before the rest of the dependencies.",
+          "why": "The fix required knowing the real deployment environment, not just optimizing the Dockerfile in the abstract — a GPU-backed deployment would have needed the opposite choice.",
+          "outcome": "Image dropped from 8.47GB to ~1.95GB. Paired with a matching Go-side change (distroless multi-stage build, dropping the full golang:1.24 toolchain image down to ~68MB static binaries) and a root .dockerignore fix so a local .env file couldn't get baked into any image via a stray COPY . .."
+        }
+      ]
+    },
+    {
+      "name": "MRI Read — local vision-LLM MRI analysis prototype",
+      "planning_process": "Started as a fast, unstructured prototype (commit message literally reads \"vibe coded before review working version\") to get a working end-to-end loop, then deliberately hardened afterward: split into modules, added unit tests, then layered in hallucination guards, logging, and performance fixes once real runs surfaced real failures. Plan-first wasn't the approach — get something running against real data first, then find out what actually breaks.",
+      "structure": "Hard split between src/mri_read/ (importable service layer — no argparse or CLI code ever) and src/cmd/ (thin CLI wrappers, one per module) so a future orchestrator can import the pipeline directly without dragging CLI concerns with it. Each pipeline concern (paths, config, engine, ollama_client, mri, dwi, qc, manifest, analyze, agent) is its own subpackage with a single-source-of-truth module other code is required to import from rather than reimplement (e.g. one place that talks HTTP to Ollama, one place that reads DICOM). An engine abstraction (one ABC method, analyze()) makes swapping the vision backend a matter of adding one branch to a factory function.",
+      "turning_points": [
+        {
+          "title": "Stuck generation silently starved every other request",
+          "situation": "A real run had all five vision calls time out at once — a different failure mode than a single slow call, which was suspicious on its own.",
+          "decision_or_fix": "Inspected the actual running processes instead of guessing. Found neither the vision nor synthesis call set a max-output-token cap, so a small quantized model stuck in a repetition loop had no bound except the context window — and Ollama runs a single processing slot, so that one stuck generation blocked every subsequent request from ever being served, each of which then hit its own client-side timeout waiting for a turn that never came. The stuck process was still eating ~2 CPU cores and 18GB RAM 52 minutes after the client had already given up.",
+          "why": "A client-side timeout can only give up on the client's own request — it can't cancel server-side generation or know the server is globally stuck versus just handling this one call slowly.",
+          "outcome": "Added an explicit num_predict cap on both the vision and synthesis calls, bounding worst-case generation time regardless of whether the model ever reaches a natural stop token."
+        },
+        {
+          "title": "Discovered the vision model was throwing away detail for free",
+          "situation": "The original vision model (llava:13b) was measured at 434.6s for a single call — slow enough to make full studies impractical on CPU.",
+          "decision_or_fix": "Rather than assume the model was just slow, checked ollama show's projector_info and confirmed llava:13b's vision tower has a fixed 336x336 input resolution baked into its architecture — every image gets downsampled to that regardless of what's sent. The app had been sending full-resolution 1024x1024 DICOM slices, paying the cost of encoding/transferring/decoding 16x the pixel data for zero benefit, since the model discarded it before using it.",
+          "why": "Confirming via the model's own reported architecture rather than assuming resolved whether this was a real fix or a coincidental speedup.",
+          "outcome": "Switched the default vision model to qwen2.5vl:7b, which uses native dynamic resolution instead of a fixed crop, while keeping llava:13b available via a flag."
+        },
+        {
+          "title": "Designing redact-vs-flag for a genuinely high-stakes hallucination guard",
+          "situation": "Real runs surfaced multiple distinct ways the models hallucinated: raw unparseable text landing verbatim in the report as a fake patient-record schema, the vision model echoing its own prompt's example schema back as if it were a real observation, and a series self-reporting the wrong sequence label, silently merging its finding under someone else's category.",
+          "decision_or_fix": "Built a deterministic (no-LLM) guard rather than asking a second model to judge the first model's output, since that compounds hallucination risk instead of reducing it. The design stance: it's fine for the report to say nothing about a finding, it is not fine to state an unsupported claim as established — so uncorroborated diagnostic-sounding claims get their finding text replaced outright with a redaction marker (not just a lower confidence number next to the original claim, since a caveat next to the word \"tumor\" is too easy to miss on a skim), while the original wording survives in a flag for a human reviewer.",
+          "why": "This is medical-adjacent output people could act on even with disclaimers attached, so the failure mode to optimize against is a false claim being read as established, not a missed one.",
+          "outcome": "A two-pass guard (pre-synthesis correlation check, post-synthesis word-level substitution) plus a same-day follow-up fix for a false-positive in the guard's own suppression-count logic, caught before it shipped."
+        }
+      ]
+    },
+    {
+      "name": "Reargs Similarity API",
+      "planning_process": "Two distinct phases, roughly a v1 and a v2: v1 (boot.dev's first personal-project course) was a single script proving the clustering idea worked on one plain-text file — no persistence, no API, no other file formats. Months later, rewrote it from scratch as v2 once the features actually wanted (saved/queryable collections, markdown/PDF input, an LLM-generation step, real deployability) required a different architecture than the original script could grow into, rather than patching it incrementally.",
+      "structure": "src/main.py is the FastAPI entrypoint wiring together three independent modules: reargs_engine/ (chunking text into paragraphs/sentences and clustering by similarity — the core logic, unchanged in spirit since v1), reargs_llm/ (prompt templating and Gemini calls for LLM-powered generation from selected clusters), and chroma_db/ (a thin persistence wrapper around ChromaDB's cloud client for saving/querying/deleting collections). lib/ holds format-specific input processors (markdown_processor, pdf_processor) that normalize different upload types down to plain text before they reach reargs_engine.",
+      "turning_points": [
+        {
+          "title": "An await in the wrong place broke every text/markdown upload",
+          "situation": "Uploaded .txt/.md files were failing at the point of decoding their content, with an error saying the object had no attribute 'decode'.",
+          "decision_or_fix": "The bug was operator precedence, not a missing method: `await file.read().decode(\"utf-8\")` called `.decode()` on the still-pending coroutine that `file.read()` returns, before it was ever awaited into actual bytes. Fixed by wrapping the await first: `(await file.read()).decode(\"utf-8\")`.",
+          "why": "The error message pointed at the wrong culprit — the coroutine wasn't missing a decode method; the code was just decoding before the awaited bytes existed.",
+          "outcome": "Both the plain-text and markdown upload paths were fixed with the same one-line pattern once the actual cause was identified."
+        },
+        {
+          "title": "Rebuilding as v2 instead of patching the original script",
+          "situation": "The first version (boot.dev's first personal-project course) was a single-file CLI script that read one text file and clustered its contents locally — no persistence, no API, no multi-format support.",
+          "decision_or_fix": "Rather than extend that script incrementally, rewrote it as a FastAPI service (\"reargs v2\") backed by a persistent ChromaDB vector store, with markdown/PDF processing, collection management, and an LLM-generation endpoint layered on top of the same core clustering logic.",
+          "why": "The features actually wanted (saved collections, querying, multiple file types, deployability) didn't fit the original one-shot script's shape — the storage and interface model needed to change, not just the feature set.",
+          "outcome": "v2 became the version that got tests, CI, and a live demo deployment — the original script never grew any of that."
+        }
+      ]
+    },
+    {
+      "name": "BlightSanest — Stable Insights",
+      "planning_process": "Deliberately built as a synthesis of two earlier, narrower projects rather than from scratch: the original BlightSanest (RabbitMQ pub/sub CLI, see \"Pub/sub financial-analysis CLI\") proved out async data processing patterns, and a separate health-focused RAG API (see \"Health-records RAG API\") proved RAG was viable for private, domain-specific data. This project generalizes both into a single domain-agnostic platform, and treats itself explicitly as a dual-purpose project — a portfolio piece and an AWS certification learning vehicle — with its own maintained roadmap doc tracking phase-by-phase completion percentages and risk items rather than an informal todo list.",
+      "structure": "Four-component architecture with the API (Go) as the sole orchestrator: API-Database over SQL/ORM, API-RAG and API-PubSub over gRPC (planned), RAG-Database read-only over SQL/pgvector, and PubSub deliberately never talking to RAG directly. The RAG service itself is layered: inverted_index/ (BM25) and semantic_index/ (Sentence Transformer embeddings) feed search/ (Reciprocal Rank Fusion combining both), storage/ abstracts S3 (source of truth) with an optional non-fatal Redis cache in front of it, and type_converter/ is an independent, extensible serialization layer so MessagePack can round-trip Python types it doesn't natively support. CLAUDE.md documents the architecture as explicitly non-negotiable — new communication paths, runtime indexing, or cross-user indexes are hard constraints, not just conventions.",
+      "turning_points": [
+        {
+          "title": "Choosing to unify, not rebuild from zero",
+          "situation": "Two earlier, working projects existed independently: a RabbitMQ pub/sub CLI for crypto analysis, and a health-specific RAG API (ExpressJS/TypeScript) that let users query medical records conversationally.",
+          "decision_or_fix": "Rather than start a third project from scratch, or keep extending the health-specific one, generalized both into a single domain-agnostic platform: the pub/sub project's async processing model and the health project's proof that RAG works for private domain-specific data both carried forward as validated design decisions, not re-litigated.",
+          "why": "Two separate working prototypes had already answered the open questions (does async pub/sub scale, does RAG work for private structured data) — the actual open question left was how to generalize past a single domain, not whether the underlying approaches worked.",
+          "outcome": "BlightSanest — Stable Insights is scoped from day one as domain-agnostic (health, finance, fitness, etc. as pluggable modules) rather than health-specific, directly because of what the predecessor projects proved."
+        },
+        {
+          "title": "MessagePack doesn't know about Python's own types",
+          "situation": "The project standardized on MessagePack for storage (smaller, faster, language-agnostic vs JSON), but the actual data being serialized — BM25 term frequencies, chunk embeddings, index structures — used Python types (Counter, OrderedDict, defaultdict, sets, tuples, numpy arrays, Pydantic models) that msgpack has no native support for.",
+          "decision_or_fix": "Built a TypeConverter as its own independent layer: a registry mapping each type name to a serializer/deserializer pair (e.g. a set becomes a list going out, a list becomes a set coming back), applied recursively so nested structures round-trip correctly, with Pydantic models registered dynamically per-class rather than hardcoded.",
+          "why": "Hardcoding format-specific logic into each class that needed serialization would have scattered the same conversion problem across the codebase instead of solving it once.",
+          "outcome": "200+ test cases covering the type registry, used identically by both InvertedIndex and SemanticIndex storage paths — new serializable types get one registration call, not a new special case."
+        },
+        {
+          "title": "Combining BM25 and semantic scores without inventing an arbitrary weight",
+          "situation": "Hybrid search needed to combine two fundamentally different scoring systems: BM25's unbounded lexical relevance score and semantic search's 0-1 cosine similarity — directly averaging or weighting them would require picking an arbitrary tuning constant with no principled basis.",
+          "decision_or_fix": "Used Reciprocal Rank Fusion instead of a weighted score combination: RRF only looks at each result's rank position in each list, never the raw scores themselves, so two incompatible scoring scales are never actually compared to each other.",
+          "why": "A weighted average is only meaningful when both inputs are on comparable scales — BM25 and cosine similarity aren't, so any fixed weight would be arbitrary and would need re-tuning per dataset.",
+          "outcome": "Hybrid search combines lexical exact-term matching with semantic/synonym matching without a tunable weight parameter to get wrong."
+        }
+      ]
+    },
+    {
+      "name": "Health-records RAG API",
+      "planning_process": "Small, focused build (about 2.5 weeks, 5 commits) validating one specific idea for the later BlightSanest platform: whether an LLM could turn raw structured medical history into a useful patient-facing summary without ever attempting a diagnosis itself. Used a real interoperability standard (openEHR/EHRbase) rather than a toy schema from the start, since the point was proving the pattern against something a real health system could plausibly ingest.",
+      "structure": "Express app (src/app.ts, src/server.ts) exposing a single /diagnose route. Two services split the responsibility cleanly: ehr.service.ts owns all openEHR/EHRbase interaction (get-or-create EHR, building COMPOSITION objects from typed symptom input, AQL queries for history), and llm.service.ts owns the Ollama call and its constrained system prompt. Symptom data has a single typed schema (symptom.type.ts, Zod-validated) shared by both services, so the archetype-building code and the LLM-prompt-building code never disagree about the input shape.",
+      "turning_points": [
+        {
+          "title": "EHRbase started before Postgres could actually accept connections",
+          "situation": "docker-compose brought up EHRbase and Postgres together, but EHRbase's depends_on only waited for the Postgres container to start, not for Postgres to actually be ready to accept connections — a distinction Docker doesn't enforce by default.",
+          "decision_or_fix": "Switched depends_on to condition: service_healthy tied to a pg_isready healthcheck, added the separate DB_USER_ADMIN/DB_PASS_ADMIN environment variables EHRbase requires in addition to its regular app-level DB user, and put both services on an explicit shared network rather than relying on the default one.",
+          "why": "A container reporting 'started' says nothing about whether the process inside it is actually ready to serve requests — EHRbase's own startup was failing intermittently against a Postgres that hadn't finished initializing yet.",
+          "outcome": "EHRbase came up reliably against Postgres on every docker compose up, not just when the race happened to resolve in the right order."
+        },
+        {
+          "title": "Constraining the LLM's role directly in the prompt, not just in the UI",
+          "situation": "The whole point of the feature was to have an LLM look at a user's symptom history and summarize it — a genuinely easy line to cross into sounding like a diagnosis, especially once severity scores and trends are involved.",
+          "decision_or_fix": "Wrote the system prompt to explicitly state the assistant is not a doctor, must not diagnose, and must not recommend medications, before ever describing the task — and constrained the output to five fixed fields (patterns, severityTrend, doctorBriefing, triggerInsights, gaps) rather than free-form text, so there's no open slot for the model to slip a recommendation into.",
+          "why": "A disclaimer bolted onto the UI doesn't stop the model from generating diagnostic-sounding language in the first place — the constraint needed to shape what the model actually generates, not just how it's displayed afterward.",
+          "outcome": "Every response is forced into the same five-field structure, one of which (doctorBriefing) is explicitly framed as something to hand to a real doctor rather than act on directly."
+        },
+        {
+          "title": "Building against a real interoperability standard instead of a custom schema",
+          "situation": "Storing symptom history could have been a simple custom Postgres table — faster to build, no need to learn openEHR's archetype model.",
+          "decision_or_fix": "Modeled data as real openEHR COMPOSITIONs and OBSERVATIONs with correct archetype_node_id codes (at0001 for symptom name, at0021 for severity category, etc.), backed by EHRbase, and wrote AQL (Archetype Query Language) queries to retrieve it back out in the shape the LLM step needed.",
+          "why": "The point of this prototype was proving the concept against something resembling a real health-data system, not just proving an LLM could summarize a database row — a custom schema would have proven a weaker, less transferable claim.",
+          "outcome": "A working get-or-create-EHR-then-query-history pipeline against a real openEHR backend, directly informing BlightSanest — Stable Insights' later decision to treat this as validated proof that RAG-style synthesis works for private, domain-specific data."
+        }
+      ]
+    },
+    {
+      "name": "AI Damage-Claim Verification Agent",
+      "planning_process": "Built under a hard 24-hour hackathon deadline (HackerRank Orchestrate), starting from the organizers' provided starter repo (problem statement, CSV schema, sample images) with the actual solution authored under code/. Iterated with an AI coding tool's help, visible directly in the repo's own commit history: got a working end-to-end pipeline first, then spent the final hours on a dedicated cleanup/refactor pass (removing dead code and duplicated logic, fixing a schema-violating bug in the code's own error path) before the final submission commit.",
+      "structure": "Four-stage pipeline, each stage owning one responsibility: Rag (CLIP-based image/text similarity -> damage type, severity, quality flags per image) feeds Organizer (loads user history + evidence requirements from CSV, aggregates RAG output, computes the evidence_standard_met signal), which feeds LLMReasoner (single Ollama call producing all 14 output fields, with its own strict validation/normalization pass so nothing unvalidated reaches the CSV), all driven by Agent (iterates the claims CSV, calls the pipeline per row, writes output.csv, tracks summary stats). LLMReasoner.OUTPUT_COLUMNS is the single source of truth for the output schema — Agent references it rather than keeping its own copy.",
+      "turning_points": [
+        {
+          "title": "A bug in the safety net itself",
+          "situation": "When any pipeline stage failed for a claim, an error-fallback path returned a default output row so the run wouldn't crash on a single bad claim — but that fallback path itself set risk_flags to 'processing_error', a value not present in the schema's own VALID_RISK_FLAGS set.",
+          "decision_or_fix": "Caught during a final cleanup pass before submission: changed the fallback's risk flag to 'manual_review_required', an already-valid enum value with the right meaning (this claim needs a human to look at it).",
+          "why": "A safety-net path is exactly the code that runs when something else has already gone wrong — if it also silently violates the output schema, a grader or downstream consumer has no reliable signal that anything failed at all.",
+          "outcome": "Every output row, including ones produced entirely by the error path, now validates against the same enum set as normal successful rows."
+        },
+        {
+          "title": "Calibrating three thresholds against labeled ground truth instead of guessing",
+          "situation": "The pipeline depended on three numeric cutoffs — CLIP quality thresholds for flagging blurry/dark/cropped images, a minimum claim-image similarity score, and a minimum evidence-requirement match score — each of which directly decides whether an image counts as valid supporting evidence.",
+          "decision_or_fix": "The provided sample_claims.csv included ground-truth labels for all 14 output columns. Ran the pipeline against it first, compared predictions to the known-correct labels, and adjusted the three thresholds based on where predictions diverged from ground truth, before ever running against the unlabeled full dataset.",
+          "why": "Any of these thresholds picked from intuition alone (e.g. 'a similarity above 0.5 seems high enough') has no reason to match how the actual images and claims in this dataset are distributed — the labeled sample was the only real signal available for what these cutoffs should be.",
+          "outcome": "CLAIM_SIMILARITY_THRESHOLD (0.20) and EVIDENCE_MATCH_THRESHOLD (0.22) ended up well below what an intuitive guess might have picked, reflecting the actual similarity-score distribution the CLIP model produced on this dataset rather than an assumed one."
+        },
+        {
+          "title": "Treating a small local model's output as untrusted by default",
+          "situation": "The final model choice, llama3.2:1b, is a small 1B-parameter model chosen for fast local CPU inference under hackathon time constraints — and small quantized models are more prone to breaking a requested output format (returning a list where a string was asked for, inventing a risk flag not in the allowed set, wrapping JSON in prose) than larger models.",
+          "decision_or_fix": "Layered two independent defenses rather than trusting the system prompt alone: the system prompt itself has an explicit 'STRICT FORMAT RULES' section spelling out exactly what NOT to return (no dicts, no lists, no raw booleans) for each field, and separately, every field passes through deterministic normalization/enum-validation code after parsing, regardless of what the prompt asked for.",
+          "why": "A prompt instruction is a request, not a guarantee — for a model this small, assuming compliance would mean assuming away the exact failure mode most likely to actually happen.",
+          "outcome": "Invalid values (an unrecognized issue_type, a risk flag outside the allowed set, a boolean instead of a string) are caught and replaced with safe fallbacks in code, not just discouraged in the prompt — the CSV always gets exactly 14 valid fields regardless of what the model actually returned."
+        }
+      ]
+    },
+    {
+      "name": "RAG support-ticket triage agent",
+      "planning_process": "Built under a 24-hour hackathon deadline (HackerRank Orchestrate, May 1-2 2026), starting from the organizers' starter repo and a real support-article corpus (HackerRank, Claude, and Visa help-center exports) rather than synthetic data. Kept refining after the official deadline had passed, per the developer's own commit log — the final key-error fix and cleanup commits landed after the event's stated end time.",
+      "structure": "Four small modules, each with one job: embeddings/ (Sentence Transformer encoding, disk-cached .npy embeddings, brute-force cosine similarity search), loader/ (reads the corpus's markdown files with frontmatter, reads the ticket CSV into typed queries), llm/ (a single prompt template plus a thin Gemini client wrapper), and writer/ (parses the LLM's JSON response and writes the output CSV). main.py wires these together in one linear pass per ticket: load/build embeddings once, then for each ticket — embed the query, retrieve the top-10 matches, call the LLM, parse and collect the response.",
+      "turning_points": [
+        {
+          "title": "A strict dict lookup crashed on the real dataset's actual column name",
+          "situation": "The ticket loader read each CSV row with row[\"company\"] — a direct key lookup assuming the column is spelled exactly that way — and it worked fine during early development, but raised a KeyError once run against the real support_tickets.csv, whose company column was actually named differently.",
+          "decision_or_fix": "Replaced every strict row[\"...\"] lookup in the loader with row.get(\"...\", <default>), matching the real column name and falling back to a safe default (\"none\"/empty string) instead of crashing outright when a field is genuinely absent.",
+          "why": "A hackathon's real input files aren't guaranteed to match assumptions made while writing the loader against sample data — the code needed to tolerate the actual file it was going to be graded on, not the file it was written against.",
+          "outcome": "The loader no longer crashes on a single malformed or unexpectedly-named field; combined with a matching fix in main.py to skip (not write) any ticket where the LLM itself returned an empty response, a bad row now gets skipped rather than taking down the whole run."
+        },
+        {
+          "title": "Escalate-by-default was encoded in the prompt, not left as agent judgment",
+          "situation": "The task's hard requirement was that the agent must escalate fraud, billing/account-access, or unsupported cases rather than guess at an answer — a real judgment call that's easy for an LLM to get wrong by trying to be helpful.",
+          "decision_or_fix": "Wrote the task prompt to state the escalation rule as an explicit instruction ahead of the actual query — \"if the query involves fraud, billing account access, or anything not covered in provided support corpus escalate, otherwise reply directly\" — rather than relying on the model to infer when escalation was warranted from context alone.",
+          "why": "An LLM's default instinct is to attempt an answer; the one behavior this task explicitly penalized was answering confidently on something outside the corpus or in a sensitive category, so that exact behavior needed to be named directly rather than assumed.",
+          "outcome": "status (replied/escalated) is grounded in an explicit rule stated before the query is even shown to the model, rather than an implicit judgment the model has to derive on its own each time."
+        },
+        {
+          "title": "Building retrieval from scratch instead of reaching for a vector database",
+          "situation": "The corpus is a few hundred markdown help-center articles across three companies — small enough that a full vector database (with its own indexing, infrastructure, and query language) would be substantial overhead for the actual amount of data involved.",
+          "decision_or_fix": "Encoded the whole corpus once with a Sentence Transformer, cached the resulting embeddings array to disk as a single .npy file, and implemented cosine similarity search directly as a linear scan over that array — reusing the cached embeddings on subsequent runs instead of re-encoding, only rebuilding when the corpus size changes.",
+          "why": "A linear scan over a few hundred embeddings is fast enough that a proper vector database would add setup and dependency cost without a real retrieval-speed benefit at this corpus size.",
+          "outcome": "Retrieval works with no external service dependency — just a numpy array on disk — appropriate for a 24-hour hackathon's actual data volume rather than over-building for a scale the task didn't have."
+        }
+      ]
+    }
+  ]
+}
