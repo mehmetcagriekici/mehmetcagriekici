@@ -1,0 +1,28 @@
+{
+  "known_gaps": [
+    {
+      "gap": "no_professional_experience",
+      "status": "established",
+      "fact": "Zero paid/professional work experience — first job seeker. All practical evidence is self-directed and hackathon projects, building consistently since July 2025 (~1 year as of mid-2026).",
+      "phrasing": "I have none — everything described above is self-directed work since July 2025. State the real duration directly (~1 year), never implied as equivalent to professional years. When a posting asks for years of depth in one specific language/stack, name that narrower gap too rather than only the general one — e.g. \"my TypeScript/Node.js work specifically is one project, not years of depth; most of my hands-on time has been in Python and Go.\""
+    },
+    {
+      "gap": "in_progress_degree",
+      "status": "established",
+      "fact": "First-year student, Management Information Systems, Ankara University Open Education Faculty (Açıköğretim/distance learning). Transcript only, no diploma yet. Expected completion 2029. No CS or Engineering degree, no other degrees.",
+      "phrasing": "I don't hold a Bachelor's in CS or Engineering. I'm a first-year student in Management Information Systems at Turkey's Open Education Faculty, expected 2029."
+    },
+    {
+      "gap": "gpa",
+      "status": "draft — not yet used in a real letter, confirm before relying on this",
+      "fact": "GPA 2.6/4.0, first year completed, Ankara University Open Education Faculty.",
+      "phrasing": "Don't volunteer the number unprompted. If a posting explicitly asks for GPA, state it plainly: \"My GPA so far is 2.6/4.0.\" No hedging, no rounding, no omitting."
+    },
+    {
+      "gap": "visa_sponsorship_needed",
+      "status": "draft — gap was flagged in past letters but exact wording wasn't preserved (cover.tex is overwritten per application), confirm before relying on this",
+      "fact": "Turkish citizenship only. Needs visa/work-permit sponsorship for any role requiring EU/EEA, UK, US, or other non-Turkish work authorization. Open to relocation.",
+      "phrasing": "I'm based in Ankara, Turkey, and would need visa/work-permit sponsorship for this role — naming that directly rather than letting it surface later in the process."
+    }
+  ]
+}
