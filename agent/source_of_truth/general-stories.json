@@ -1,0 +1,23 @@
+{
+  "general_stories": [
+    {
+      "id": "study_streak_resilience",
+      "context": "Boot.dev self-directed learning, ~1 year (Jul 2025 - present)",
+      "fact": "The study streak broke multiple times over the year of consistent Boot.dev work — life made maintaining a daily routine genuinely hard at points. Visible progress-tracking (day-streak counters, XP) was what pulled the habit back together each time rather than letting a broken streak end the effort altogether. Result: a 144-day streak badge (Feb 2026) and 2,730 lessons solved despite the breaks.",
+      "usable_for": ["how do you handle setbacks", "tell me about a time you had to rebuild motivation or discipline", "describe your approach to consistency in learning"],
+      "note": "Do not name a specific personal/medical reason for the breaks — kept private per user request 2026-07-22. Frame only in terms of the observable pattern: broke, rebuilt, kept going."
+    },
+    {
+      "id": "redid_path_in_typescript",
+      "context": "Boot.dev Backend Developer Path, completed twice: Python/Go (Dec 2025), then TypeScript (Feb 2026)",
+      "fact": "Already knew TypeScript going into the second pass, so this wasn't about learning a new language — it was a deliberate choice to redo the entire path anyway rather than stop after the first language, because one pass didn't feel like enough depth.",
+      "usable_for": ["tell me about a time you chose depth over moving fast", "describe your approach to learning something well versus just finishing it", "why do you do the things you do beyond what's required"]
+    },
+    {
+      "id": "guided_projects_ai_assisted_research_then_reuse",
+      "context": "Boot.dev guided projects (Pokedex, Blog Aggregator, Maze Solver, Web Scraper, Static Site Generator, Asteroids, AI Agent, and others)",
+      "fact": "The guided projects themselves were the hardest part of the path — leaned on AI tools heavily for research when stuck, more than on the graded lesson content itself. What mattered wasn't finishing a guided project in isolation: concepts and patterns worked out there got carried over and actually implemented in independent projects afterward, rather than staying a one-off exercise.",
+      "usable_for": ["how do you use AI tools when learning or building", "tell me about a time you had to research your way through something hard", "how do you apply what you learn instead of just completing an exercise"]
+    }
+  ]
+}

@@ -146,11 +146,29 @@
     "relocation_willingness": true,
     "remote_preference": "open to remote/hybrid as well as on-site (with relocation)",
     "work_authorization": "Turkish citizenship only",
-    "visa_sponsorship_needed": true,
+    "visa_sponsorship_needed": {
+      "remote": false,
+      "onsite_or_relocation": true,
+      "note": "Remote roles worked from Turkey need no visa/work-permit sponsorship. On-site or relocation roles in a non-Turkish jurisdiction do."
+    },
     "notice_period": "immediate",
     "language_proficiency": {
       "Turkish": "native",
       "English": "fluent (self-assessed, no certified proof level)"
+    }
+  },
+
+  "eeo": {
+    "gender": "Male",
+    "veteran_status": "Not a veteran",
+    "disability_status": "No disability",
+    "race_ethnicity": {
+      "value": "White",
+      "note": "Standard US EEO race/ethnicity categories don't map cleanly from nationality (Turkish) — use this value when a form forces a choice among standard categories; 'decline to state' is always a legally valid alternative if preferred for a specific application."
+    },
+    "sexual_orientation": {
+      "value": "straight",
+      "policy": "Only answer if a form explicitly asks — not part of standard EEO/veteran/disability disclosures, a separate and less common voluntary field. Never volunteer unprompted."
     }
   },
 

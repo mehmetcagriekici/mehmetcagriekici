@@ -14,15 +14,18 @@
     },
     {
       "gap": "gpa",
-      "status": "draft — not yet used in a real letter, confirm before relying on this",
-      "fact": "GPA 2.6/4.0, first year completed, Ankara University Open Education Faculty.",
+      "status": "established",
+      "fact": "GPA 2.6/4.0, first year completed, Ankara University Open Education Faculty. Confirmed 2026-07-22, stable for the next several months.",
       "phrasing": "Don't volunteer the number unprompted. If a posting explicitly asks for GPA, state it plainly: \"My GPA so far is 2.6/4.0.\" No hedging, no rounding, no omitting."
     },
     {
       "gap": "visa_sponsorship_needed",
-      "status": "draft — gap was flagged in past letters but exact wording wasn't preserved (cover.tex is overwritten per application), confirm before relying on this",
-      "fact": "Turkish citizenship only. Needs visa/work-permit sponsorship for any role requiring EU/EEA, UK, US, or other non-Turkish work authorization. Open to relocation.",
-      "phrasing": "I'm based in Ankara, Turkey, and would need visa/work-permit sponsorship for this role — naming that directly rather than letting it surface later in the process."
+      "status": "established",
+      "fact": "Turkish citizenship only. Remote roles worked from Turkey need no visa/work-permit sponsorship. On-site or relocation roles in an EU/EEA, UK, US, or other non-Turkish jurisdiction need sponsorship. Open to relocation (with sponsorship). Mirrors the conditional `visa_sponsorship_needed` field in `profile.json`'s `job_preferences`.",
+      "phrasing": {
+        "remote": "Not a gap to raise for remote roles — working remotely from Turkey requires no visa or work-permit sponsorship.",
+        "onsite_or_relocation": "I'm based in Ankara, Turkey, and would need visa/work-permit sponsorship for this role — naming that directly rather than letting it surface later in the process."
+      }
     }
   ]
 }

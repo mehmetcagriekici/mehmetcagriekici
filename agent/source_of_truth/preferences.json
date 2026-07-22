@@ -1,0 +1,16 @@
+{
+  "preferences": {
+    "roles": {
+      "primary": ["backend developer"],
+      "also_acceptable": ["fullstack developer", "AI/ML engineer"]
+    },
+    "work_mode": "remote preferred",
+    "regions_open_to": ["Europe", "USA", "Canada"],
+    "tech_stack_priority": {
+      "preferred": ["Go", "Python"],
+      "acceptable": ["TypeScript"]
+    },
+    "hard_deal_breakers": []
+  },
+  "note": "Visa/work-authorization requirements (Turkish citizenship, needs sponsorship) already live in profile.json under job_preferences — not duplicated here to avoid the two files diverging."
+}
