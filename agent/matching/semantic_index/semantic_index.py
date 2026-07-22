@@ -1,23 +1,16 @@
-from botocore.client import ClientError, logging
-from redis import ResponseError
 from sentence_transformers import SentenceTransformer
 from constants.constants import SEARCH_LIMIT
 from helpers.helpers import cosine_similarity, semantic_chunk
-from storage.storage import Storage
-from custom_types.custom_types import Document, User
+from custom_types.custom_types import Document
 
 # semantic indexing class with chunking
 class SemanticIndex:
-    def __init__(self, current_user: User, model_name: str = "all-MiniLM-L6-v2") -> None:
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
         self.model = SentenceTransformer(model_name)
         self.documents = None
         self.docmap = {}
         self.chunk_embeddings = None
         self.chunk_metadata = None
-
-        # storage for embeddings and metadata
-        self.storage = Storage(current_user)
-
 
     # generate an embedding using the model for a text
     def generate_embedding(self, text: str):
@@ -38,9 +31,7 @@ class SemanticIndex:
         for i in range(len(documents)):
             document = documents[i]
             # keep the docmap current so chunks can always be hydrated back
-            # to their document through the stable document_id, regardless
-            # of whether build_chunk_embeddings is called directly (ingestion)
-            # or via create_or_load_chunk_embeddings
+            # to their document through the stable document_id
             self.docmap[document.id] = document
             # if document content is empty move to the next iteration
             if document.content == "":
@@ -65,44 +56,8 @@ class SemanticIndex:
         self.chunk_embeddings = self.model.encode(chunks)
         # assign chunk metadata
         self.chunk_metadata = chunk_metadata
-        
-        # upload chunk embedings and chunk metadata to the storage
-        try:
-            # chunk embeddings
-            self.storage.upload_data("chunk_embeddings", self.chunk_embeddings)
-            # metadata
-            self.storage.upload_data("chunk_metadata", self.chunk_metadata)
-        except ValueError as e:
-            logging.error("a value error occured while trying to upload the semantic index: %s", e)
-            return None
-        except ClientError as e:
-            logging.error("a client error occured while trying to upload the semantic index: %s", e)
-            return None
-        except ResponseError as e:
-            logging.error("a response error occured while trying to upload the semantic index: %s", e)
-            return None
 
         return self.chunk_embeddings
-
-    # load or create chunk embeddings
-    def create_or_load_chunk_embeddings(self, documents: list[Document]):
-        self.documents = documents
-        # iterate over the documents and create the docmap
-        for i in range(len(self.documents)):
-            self.docmap[self.documents[i].id] = self.documents[i]
-        
-        # check if chunk embeddings and chunk metadata is already built
-        chunk_embeddings = self.storage.load_data("chunk_embeddings")
-        chunk_metadata = self.storage.load_data("chunk_metadata")
-        # use explicit None checks: chunk_embeddings is a numpy array and
-        # evaluating it in a boolean context raises ValueError
-        if chunk_metadata is not None and chunk_embeddings is not None:
-            self.chunk_embeddings = chunk_embeddings
-            self.chunk_metadata = chunk_metadata
-            return self.chunk_embeddings
-
-        # otherwise build the embeddings
-        return self.build_chunk_embeddings(documents)
 
     # semantic chunk search
     def search_chunks(self, query: str, limit: int = SEARCH_LIMIT):
@@ -143,8 +98,7 @@ class SemanticIndex:
         for kv in top_documents:
             document_id = kv[0]
             # resolve chunks back to documents through the stable docmap
-            # using document_id - never rely on positional indexes, since
-            # cached chunk_metadata can outlive a reordering of self.documents
+            # using document_id - never rely on positional indexes
             document = self.docmap.get(document_id)
             if document is None:
                 continue
