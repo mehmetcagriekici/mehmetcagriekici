@@ -32,26 +32,25 @@
 
 \vspace{12pt}
 
-Hiring Team at Saga
+Hiring Team at BJAK
 
 \vspace{12pt}
 
 Dear Hiring Team,
 
-I'm writing about the Back-End Engineer role. Saga's angle — technology that strengthens legal reasoning instead of replacing it — is a good fit for the kind of retrieval and RAG systems I've spent the last year building.
+I'm writing about the Backend Engineer role on BJAK's AI Neobank app team.
 
-My most recent project, BlightSanest, is a multi-service backend (Go API orchestrator, Python RAG engine, Go pub/sub) built around hybrid retrieval: BM25 and semantic embeddings (Sentence Transformers, pgvector) fused with Reciprocal Rank Fusion, Ollama for local inference and AWS Bedrock in production. I've also shipped a TypeScript/Node.js REST API (health-records service, Express) and a document-analysis API with automatic clustering, natural-language querying, and LLM-generated summaries over uploaded documents. The async pipeline work in BlightSanest — a pre-computed indexing job with S3 as source of truth and a Redis cache with fallback — maps directly to the background-processing and long-running-job work in this role.
+Since July 2025 I've been building backend systems nearly every day, in Go, Python, and TypeScript, across API services, pub/sub architectures, and cloud-deployed pipelines. My main project, BlightSanest, is a multi-service platform (Go API orchestrator, Python RAG engine, gRPC, PostgreSQL/pgvector) built around strict per-user data isolation, alongside a TypeScript/Express REST API and an earlier RabbitMQ pub/sub system serving concurrent clients off a shared data-fetching server. I've worked with AWS (S3, Aurora, EKS, Cognito), Docker (cut image sizes from 800MB+ down to ~68MB via distroless multi-stage builds), and GitHub Actions CI/CD on every project. Debugging has meant chasing down real failures, not just building greenfield: a Docker Compose startup race, three separate live-endpoint crashes in one project (an undeclared dependency, a pydantic indexing bug, a JSON-unencodable numpy return type), a stuck-generation bug traced to a missing token cap under Ollama's single-slot queuing.
 
-I want to be direct about where I don't yet match the posting, rather than let you find out later:
+I want to be direct about where this doesn't match what you're asking for, since your posting is specific about it:
 
 \begin{itemize}
-\item \textbf{Professional experience.} The posting asks for 3+ years of professional backend experience with TypeScript and Node.js. I have none — everything above is self-directed work since July 2025, and my TypeScript/Node.js work specifically is one project, not years of depth. Most of my hands-on time has been in Python and Go.
-\item \textbf{Production codebases.} All of my projects are greenfield — built from scratch, not developed inside an existing production codebase alongside other engineers. I haven't yet had to work within someone else's architecture and constraints.
-\item \textbf{LLM providers.} I haven't used OpenAI or Anthropic APIs specifically — my LLM integration experience is with Gemini, Ollama, and AWS Bedrock. The prompt design, RAG orchestration, and evaluation work transfers, but I want to name the specific gap rather than let "LLMs from OpenAI, Anthropic, and Google" pass unchallenged.
-\item \textbf{Degree.} I don't hold a Bachelor's in CS or Engineering. I'm a first-year student in Management Information Systems at Turkey's Open Education Faculty, expected 2029.
+\item \textbf{Location.} You're hiring specifically for candidates already based in Sweden. I'm not — I'm in Ankara, Turkey, and don't currently have Swedish work authorization.
+\item \textbf{Production experience.} Everything above is self-directed personal and hackathon work, not a production system serving real customers or internal operations at scale. You've named that specifically as what this role isn't for, so I'd rather say it directly than let you find out later.
+\item \textbf{Fintech/payments/KYC.} I have none — no experience with payments, banking, wallets, or fraud/risk systems.
 \end{itemize}
 
-If the engineering itself is what matters most to you, I'd welcome the chance to talk it through. Thank you for considering my application.
+If you still want to talk given that, I'd welcome it. Thank you for considering my application.
 
 \vspace{12pt}
 
