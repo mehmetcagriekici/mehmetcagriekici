@@ -1,0 +1,26 @@
+{
+  "id": "posting-data-engineer-mlops-001",
+  "title": "Data Engineer / MLOps",
+  "company": "Verrastack",
+  "location": "Remote (US/Canada)",
+  "employment_type": "full-time",
+  "description": "Verrastack is building data pipelines that feed our internal ML and semantic search products. We're looking for a data engineer comfortable owning Python pipelines end-to-end, from ingestion through to serving embeddings for retrieval, deployed on AWS.",
+  "requirements": [
+    "Strong Python skills for building and maintaining data pipelines",
+    "Experience with vector search / embedding-based retrieval (sentence-transformers or similar)",
+    "Experience with hybrid search approaches combining keyword and semantic search",
+    "Experience with PostgreSQL, ideally with pgvector",
+    "Experience deploying pipelines on AWS (S3, and container-based compute)",
+    "Comfortable with Docker and CI/CD pipelines"
+  ],
+  "nice_to_have": [
+    "Experience integrating LLM APIs (OpenAI, Anthropic, or similar) into pipelines",
+    "Experience with Redis for caching pipeline intermediate results"
+  ],
+  "salary_range": {
+    "min": 90000,
+    "max": 130000,
+    "period": "year",
+    "currency": "USD"
+  }
+}

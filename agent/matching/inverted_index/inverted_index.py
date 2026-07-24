@@ -1,6 +1,5 @@
-import itertools
 import math
-from collections import Counter, defaultdict, OrderedDict
+from collections import Counter, defaultdict
 
 from constants.constants import BM25_B, BM25_K1, SEARCH_LIMIT
 from helpers.helpers import tokenize
@@ -37,10 +36,7 @@ class InvertedIndex:
         if not self.doc_lengths:
             return 0.0
 
-        sum = 0
-        for doc_id in self.doc_lengths:
-            sum += self.doc_lengths[doc_id]
-        return sum / len(self.doc_lengths)
+        return sum(self.doc_lengths.values()) / len(self.doc_lengths)
 
     # get the set of document ids of a token
     def get_documents(self, token: str) -> set[str]:
@@ -85,8 +81,9 @@ class InvertedIndex:
         tf = self.get_bm25_tf(doc_id, token)
         return idf * tf
 
-    # implement the bm25 search algorithm
-    def bm25_search(self, query: str, limit: int=SEARCH_LIMIT):
+    # implement the bm25 search algorithm. results are returned sorted by
+    # score, descending, so callers never need to re-sort them.
+    def bm25_search(self, query: str, limit: int=SEARCH_LIMIT) -> dict[str, float]:
         # tokenize the query
         tokens = tokenize(query)
         scores = defaultdict(float)
@@ -96,4 +93,5 @@ class InvertedIndex:
                 for doc_id in self.index[token]:
                     scores[doc_id] += self.bm25(doc_id, token)
 
-        return OrderedDict(itertools.islice(sorted(scores.items(), key=lambda kv: kv[1], reverse=True), limit))
+        top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+        return dict(top)

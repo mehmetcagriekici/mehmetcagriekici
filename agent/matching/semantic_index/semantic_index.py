@@ -76,74 +76,40 @@ class SemanticIndex:
         # generate an embedding from the query
         query_embedding = self.generate_embedding(query)
 
-        # document similarity_scores
+        # document similarity_scores, and which chunk index produced each one
         document_scores = {}
+        document_best_chunk = {}
         # iterate over the chunks
         for i in range(len(self.chunk_embeddings)):
             # create a similarity score between the query embedding and current chunk embedding
             similarity_score = cosine_similarity(query_embedding, self.chunk_embeddings[i])
             # get chunk metadata
             metadata = self.chunk_metadata[i]
-            # if the document score does not exist create a new one
-            if metadata["document_id"] not in document_scores:
-                document_scores[metadata["document_id"]] = similarity_score
-            elif document_scores[metadata["document_id"]] < similarity_score:
-                # otherwise if the current score is larger than the previous one update it
-                document_scores[metadata["document_id"]] = similarity_score
+            document_id = metadata["document_id"]
+            # if the document score does not exist, or the current chunk scores
+            # higher than the previous best chunk for this document, update both
+            if document_id not in document_scores or document_scores[document_id] < similarity_score:
+                document_scores[document_id] = similarity_score
+                document_best_chunk[document_id] = i
 
         # get the top documents using the limit
         top_documents = sorted(document_scores.items(), key=lambda kv: kv[1], reverse=True)[:limit]
         # from the top documents create the result that will be sent
         results = []
-        for kv in top_documents:
-            document_id = kv[0]
+        for document_id, score in top_documents:
             # resolve chunks back to documents through the stable docmap
             # using document_id - never rely on positional indexes
             document = self.docmap.get(document_id)
             if document is None:
                 continue
-            metadata = list(filter(lambda d: d["document_id"] == document_id, self.chunk_metadata))
-            # get the first metadata
-            if len(metadata) > 0:
-                metadata = metadata[0]
+            # metadata from the specific chunk that produced the winning score
+            metadata = self.chunk_metadata[document_best_chunk[document_id]]
             result = {
                     "id": document.id,
                     "content": document.content,
-                    "score": round(kv[1], 4),
-                    "metadata": metadata or {},
+                    "score": round(score, 4),
+                    "metadata": metadata,
                     }
             results.append(result)
 
         return results
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

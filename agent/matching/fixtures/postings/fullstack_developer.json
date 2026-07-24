@@ -1,0 +1,26 @@
+{
+  "id": "posting-fullstack-001",
+  "title": "Fullstack Developer",
+  "company": "Nordbridge Software",
+  "location": "Remote (EU timezones)",
+  "employment_type": "full-time",
+  "description": "Nordbridge is looking for a fullstack developer to help build and maintain our customer-facing web platform. You'll work across a Node/Express API and a React frontend, with a PostgreSQL database underneath. We ship fast and expect comfort moving between frontend and backend code in the same day.",
+  "requirements": [
+    "3+ years building web applications with TypeScript",
+    "Hands-on experience with Node.js/Express on the backend",
+    "Hands-on experience with React on the frontend",
+    "Experience with relational databases (PostgreSQL preferred)",
+    "Comfortable with Docker for local development and CI",
+    "Experience with GitHub Actions or similar CI/CD tooling"
+  ],
+  "nice_to_have": [
+    "Experience with Redis caching",
+    "Exposure to microservice architectures"
+  ],
+  "salary_range": {
+    "min": 55000,
+    "max": 75000,
+    "period": "year",
+    "currency": "EUR"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "posting-senior-backend-go-onsite-001",
+  "title": "Senior Backend Engineer (Go)",
+  "company": "Kranholt Systems",
+  "location": "Berlin, Germany (on-site only, no remote)",
+  "employment_type": "full-time",
+  "description": "Kranholt Systems runs high-throughput payment infrastructure. We're hiring a senior backend engineer to own core services written in Go, deployed on Kubernetes (EKS), communicating over gRPC, backed by PostgreSQL and Redis. This is an on-site role in our Berlin office; we are not able to sponsor visas or work permits for this position.",
+  "requirements": [
+    "8+ years of professional backend engineering experience",
+    "Deep expertise in Go in production systems",
+    "Experience with gRPC service-to-service communication",
+    "Experience with PostgreSQL and Redis at scale",
+    "Experience deploying to Kubernetes/EKS",
+    "Docker and CI/CD (GitHub Actions) experience",
+    "Must already hold EU work authorization; we cannot sponsor visas",
+    "Must be able to work on-site in Berlin 5 days/week"
+  ],
+  "nice_to_have": [
+    "Experience with message queues (RabbitMQ or similar)"
+  ],
+  "salary_range": {
+    "min": 85000,
+    "max": 110000,
+    "period": "year",
+    "currency": "EUR"
+  }
+}

@@ -9,8 +9,16 @@ from typing import cast
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
-nltk.download('punkt_tab')
-nltk.download('stopwords')
+# only hits the network/prints download noise the first time a resource is
+# actually missing, instead of on every import
+def _ensure_nltk_data(resource: str, path: str) -> None:
+    try:
+        nltk.data.find(path)
+    except LookupError:
+        nltk.download(resource, quiet=True)
+
+_ensure_nltk_data("punkt_tab", "tokenizers/punkt_tab")
+_ensure_nltk_data("stopwords", "corpora/stopwords")
 
 # parse json
 def parse_json(data):
@@ -94,30 +102,3 @@ def semantic_chunk(text: str, size: int, overlap: int) -> list[str]:
 # function to calculate rrf score
 def calc_rrf_score(rank: int, k: int = 60) -> float:
     return 1 / (rank + k)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
