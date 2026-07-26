@@ -1,0 +1,24 @@
+[project]
+name = "agent-python-service"
+version = "0.1.0"
+description = "Shared Python service (sourcing, matching, tailoring, tracking, review_gate) for the job-application automation agent"
+requires-python = ">=3.11"
+dependencies = [
+    # matching — hybrid_search(job_posting, source_of_truth): BM25 + embeddings
+    "numpy",
+    "nltk",
+    "sentence-transformers",
+    "pydantic",
+
+    # sourcing — not yet implemented
+
+    # tailoring — not yet implemented
+
+    # tracking — not yet implemented
+
+    # review_gate — not yet implemented
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,5 @@
+# Virtual environments (shared across agent/ modules)
+venv/
+.venv/
+env/
+ENV/

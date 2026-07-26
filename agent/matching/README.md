@@ -52,7 +52,7 @@ Adapted from an older RAG project; the parts specific to that project (AWS S3/Re
 
 ## Reproducibility
 
-`requirements.txt` (full pinned freeze) and `pyproject.toml` (direct dependencies: `numpy`, `nltk`, `sentence-transformers`, `pydantic`) are both checked in — `venv/` itself stays gitignored. `torch` installs as a `+cpu` build; if a fresh install can't resolve it from PyPI alone, add `--extra-index-url https://download.pytorch.org/whl/cpu`.
+`../requirements.txt` (full pinned freeze) and `../pyproject.toml` (direct dependencies, grouped by module — matching's are `numpy`, `nltk`, `sentence-transformers`, `pydantic`) live at `agent/` now, shared across the whole Python service rather than scoped to this module — same reasoning as the venv (see below). Both are checked in. The venv itself lives at `../venv` and stays gitignored. `torch` installs as a `+cpu` build; if a fresh install can't resolve it from PyPI alone, add `--extra-index-url https://download.pytorch.org/whl/cpu`.
 
 ## Calibration fixtures
 

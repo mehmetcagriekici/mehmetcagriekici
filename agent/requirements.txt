@@ -1,6 +1,12 @@
-# Full pinned freeze of matching/venv, for exact reproducibility (e.g. the
-# planned Docker build). Direct dependencies are declared in pyproject.toml;
-# this file is the complete resolved set, direct + transitive.
+# Full pinned freeze of the shared agent/venv (the whole Python service:
+# sourcing, matching, tailoring, tracking, review_gate), for exact
+# reproducibility (e.g. the planned Docker build). Direct dependencies,
+# grouped by which module needs them, are declared in pyproject.toml —
+# this file is the complete resolved set, direct + transitive, and can't
+# be cleanly attributed per module once transitive deps overlap.
+#
+# Currently all entries below trace back to matching/ (the only module
+# built so far). Re-freeze this file as other modules add their own deps.
 #
 # torch is a CPU-only build (+cpu). If a fresh install can't resolve it from
 # PyPI alone, add: --extra-index-url https://download.pytorch.org/whl/cpu
