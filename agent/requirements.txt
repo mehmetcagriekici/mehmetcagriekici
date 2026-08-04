@@ -6,9 +6,10 @@
 # be cleanly attributed per module once transitive deps overlap.
 #
 # Entries below trace back to matching/, ollama==0.6.2 for tailoring/'s
-# llm/client.py, and playwright==1.62.0 for tailoring/'s write/write.py
-# (Chromium print-to-PDF) — re-freeze this file as other modules add
-# their own deps.
+# llm/client.py, and playwright==1.62.0 plus pypdf==6.14.2 for tailoring/'s
+# write/write.py (Chromium print-to-PDF, then a page-count check on the
+# rendered PDF to detect one-page overflow) — re-freeze this file as other
+# modules add their own deps.
 #
 # pytest/pytest-playwright/pytest-base-url are present because they're
 # installed in venv (test-writing is the user's own domain, not something
@@ -55,6 +56,7 @@ pydantic==2.13.4
 pydantic_core==2.46.4
 pyee==13.0.1
 Pygments==2.20.0
+pypdf==6.14.2
 pytest==9.1.1
 pytest-base-url==2.1.0
 pytest-playwright==0.8.0

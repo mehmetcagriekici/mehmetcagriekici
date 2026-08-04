@@ -16,6 +16,8 @@ dependencies = [
     "ollama",
     # tailoring — write/write.py: Chromium print-to-PDF via Playwright
     "playwright",
+    # tailoring — write/write.py: page-count check via the rendered PDF
+    "pypdf",
 
     # tracking — not yet implemented
 
