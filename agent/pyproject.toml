@@ -14,6 +14,8 @@ dependencies = [
 
     # tailoring — llm/client.py: local Ollama chat calls
     "ollama",
+    # tailoring — write/write.py: Chromium print-to-PDF via Playwright
+    "playwright",
 
     # tracking — not yet implemented
 
