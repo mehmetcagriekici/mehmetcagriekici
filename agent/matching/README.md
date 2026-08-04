@@ -36,7 +36,7 @@ Matching's design is now fully settled end-to-end; only recalibrating the thresh
 
 `job_posting` and `source_of_truth` entries reduce to the same simple shape for search purposes: `Document(id, content)` — a stable id plus flattened text. This lets `hybrid_search` treat both uniformly; it doesn't need to know which kind of thing it's comparing. `hybrid_search` returns `id` plus the matched `Document` itself (not bare ids), since the caller already has the `Document` in hand during search.
 
-The richer structured record behind each `id` (the real ATS listing JSON, or the structured `source_of_truth` JSON) is *not* part of this module's concern — it's resolved separately, by that same `id`, downstream in `tailoring/`, where the LLM benefits from real structure the flattened `content` string discards.
+**Generator consumption (revised 2026-08-04, supersedes the id-resolution design below):** `tailoring/`'s Generator consumes the `(id, content)` `Document` pairs directly, as `hybrid_search` returns them — no separate resolve-by-id step back to a richer structured record. This holds up because `document_builder` builds one `Document` per *atomic* fact, with `content` as plain `json.dumps()` of that single fact — so the flattened string already *is* the structured fact, just serialized, and there's no real structure left to resolve. (The original plan below — resolving each `id` back to the real ATS listing JSON or structured `source_of_truth` JSON — was written before that atomic-fact granularity was fully accounted for.) See `../tailoring/README.md`'s Generator input note.
 
 ## Implementation notes
 
