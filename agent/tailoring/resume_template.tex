@@ -1,0 +1,92 @@
+\documentclass[10pt,a4paper]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,margin=1.3cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fontawesome5}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+% ---------- Style ----------
+\definecolor{accent}{RGB}{38,86,166}
+\hypersetup{colorlinks=true,urlcolor=accent}
+\pagestyle{empty}
+\setlength{\parskip}{1pt}
+
+\titleformat{\section}{\Large\bfseries\color{accent}}{}{0em}{}[\vspace{-6pt}\rule{\textwidth}{0.8pt}]
+\titlespacing*{\section}{0pt}{6pt}{3pt}
+
+\newcommand{\project}[3]{\vspace{3pt}{\textbf{#1} \itshape(#2)\hfill#3}\par\vspace{1pt}}
+
+\setlist[itemize]{leftmargin=1.1em,itemsep=0.5pt,parsep=0pt,topsep=1pt,label=\textbullet}
+
+\begin{document}
+
+% ---------- Header ----------
+{\huge\bfseries\color{accent} Mehmet Çağrı Ekici}\par
+\vspace{4pt}
+{
+\faEnvelope\ \href{mailto:mehmetcagriekici@gmail.com}{mehmetcagriekici@gmail.com} \quad
+\faPhone\ +90 536 477 17 89 \quad
+\faMapMarker\ Ankara, Turkey\\[2pt]
+\faGithub\ \href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici} \quad
+\faLinkedin\ \href{https://linkedin.com/in/mehmetcagriekici}{linkedin.com/in/mehmetcagriekici}
+}
+
+% ---------- Summary ----------
+\section{Summary}
+What keeps me at the keyboard is watching separate pieces --- services, queues, retrieval
+pipelines --- come together into something that works. I found backend engineering later than
+most, recognized it immediately, and went all in: building nearly every day since July 2025,
+completing Boot.dev's Backend Developer Path twice (once in Python/Go, again in TypeScript)
+because one pass wasn't enough to satisfy me. Now I'm architecting BlightSanest, a
+multi-service RAG platform, and looking for a team where I can keep building things like it.
+
+% ---------- Skills ----------
+\section{Skills}
+\begin{itemize}
+  \item \textbf{Languages:} Go, Python, TypeScript
+  \item \textbf{Backend:} gRPC, FastAPI, Express, RabbitMQ (pub/sub), PostgreSQL (pgvector), Redis, ChromaDB
+  \item \textbf{AI/ML:} RAG pipelines, hybrid search (BM25 + semantic, RRF), Sentence Transformers, CLIP, LLM integration (Gemini, Ollama, AWS Bedrock)
+  \item \textbf{DevOps:} Docker, GitHub Actions (CI/CD), AWS (S3, Aurora, EKS, Cognito)
+\end{itemize}
+
+% ---------- Projects ----------
+\section{Projects}
+
+\project{BlightSanest --- Stable Insights \normalfont(in development)}{May 2026 -- Present}{Go, Python, gRPC, PostgreSQL/pgvector, Redis, S3, Docker, AWS}
+Privacy-first smart journaling platform: users store personal data across any domain and query it conversationally through RAG or directly through hybrid search.
+\begin{itemize}
+  \item Architected three services --- Go API orchestrator, Python RAG engine, Go pub/sub --- communicating over gRPC, with per-user isolated indexes for privacy by design.
+  \item Implemented hybrid retrieval: BM25 and semantic embeddings (Sentence Transformers, pgvector) fused with Reciprocal Rank Fusion; Ollama for local LLM, AWS Bedrock in production.
+  \item Built pre-computed indexing pipeline with S3 as source of truth, Redis hot cache with automatic fallback, MessagePack serialization, and Alembic schema migrations.
+  \item RAG service phase complete; production design targets Aurora Serverless, EKS, and Cognito with a full Docker Compose local stack. \hfill \href{https://github.com/mehmetcagriekici/blightsanest_stable_insights}{\faGithub\ repo}
+\end{itemize}
+
+\project{AI Damage-Claim Verification Agent}{June 2026}{Python, CLIP, Ollama, Docker}
+24-hour hackathon (HackerRank Orchestrate, June 2026). Multimodal pipeline that decides whether submitted images support, contradict, or insufficiently evidence damage claims across cars, laptops, and packages.
+\begin{itemize}
+  \item Combined CLIP (clip-ViT-L-14) image--text similarity for damage type, severity, and image-quality classification with a local Llama 3.2 model (Ollama) producing validated 14-field structured verdicts.
+  \item Designed modular agent architecture (vision RAG layer $\rightarrow$ context organizer $\rightarrow$ LLM reasoner) with tunable evidence thresholds calibrated against labeled sample data. \hfill \href{https://github.com/mehmetcagriekici/hackerrank-orchestrate-june26}{\faGithub\ repo}
+\end{itemize}
+
+\project{Reargs Similarity API \normalfont(live demo)}{Aug 2025 -- Mar 2026}{Python, FastAPI, ChromaDB, Sentence Transformers, Gemini}
+Semantic document-analysis API that detects patterns, redundancies, and similarities across uploaded documents (.txt, .md, .pdf).
+\begin{itemize}
+  \item Automatic clustering via vector embeddings, natural-language querying of similar content, and LLM-powered generation from selected clusters.
+  \item Deployed with a live public demo; GitHub Actions CI runs tests on every push; multi-stage Docker build. \hfill \href{https://github.com/mehmetcagriekici/reargs}{\faGithub\ repo}
+\end{itemize}
+
+\vspace{3pt}
+\textbf{Other projects:} RAG support-ticket triage agent (May 2026; 24-hour hackathon; Sentence Transformers + Gemini) \,\textbullet\, Health-records RAG API (Apr 2026 -- May 2026; TypeScript, Express, openEHR/EHRbase, Ollama) \,\textbullet\, Pub/sub financial-analysis CLI (Nov 2025 -- Feb 2026; Go, RabbitMQ, PostgreSQL) --- all at \href{https://github.com/mehmetcagriekici}{github.com/mehmetcagriekici}
+
+% ---------- Education ----------
+\section{Training \& Certificates}
+\textbf{Boot.dev Backend Developer Path} --- completed twice \hfill 2025 -- 2026\par
+Python/Go track (Dec 2025) and TypeScript track (Feb 2026): 30 courses and 12 guided projects covering distributed systems, HTTP servers/clients, pub/sub, RAG, Docker, Kubernetes, CI/CD, and cryptography. 2,723 lessons solved; top-250 leaderboard. Certificates verifiable at \href{https://www.boot.dev/u/callsower}{boot.dev/u/callsower}.
+
+\end{document}
