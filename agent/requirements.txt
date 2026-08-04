@@ -5,8 +5,9 @@
 # this file is the complete resolved set, direct + transitive, and can't
 # be cleanly attributed per module once transitive deps overlap.
 #
-# Currently all entries below trace back to matching/ (the only module
-# built so far). Re-freeze this file as other modules add their own deps.
+# Entries below trace back to matching/ and, as of ollama==0.6.2, tailoring/
+# (llm/client.py's Ollama chat calls) — re-freeze this file as other modules
+# add their own deps.
 #
 # torch is a CPU-only build (+cpu). If a fresh install can't resolve it from
 # PyPI alone, add: --extra-index-url https://download.pytorch.org/whl/cpu
@@ -38,6 +39,7 @@ narwhals==2.24.0
 networkx==3.6.1
 nltk==3.10.0
 numpy==2.5.1
+ollama==0.6.2
 packaging==26.2
 pydantic==2.13.4
 pydantic_core==2.46.4

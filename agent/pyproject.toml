@@ -12,7 +12,8 @@ dependencies = [
 
     # sourcing — not yet implemented
 
-    # tailoring — not yet implemented
+    # tailoring — llm/client.py: local Ollama chat calls
+    "ollama",
 
     # tracking — not yet implemented
 
