@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ personal.name }} - Resume</title>
+{% include "_style.html" %}
+</head>
+<body>
+{% import "_macros.html" as m %}
+{{ m.header(personal, 'name-lg') }}
+
+<h2 class="section">Summary</h2>
+<p>{{ resume.summary }}</p>
+
+<h2 class="section">Skills</h2>
+<ul>
+{% for category_label, items in skills_grouped %}
+  <li><strong>{{ category_label }}:</strong> {{ items | join(', ') }}</li>
+{% endfor %}
+</ul>
+
+<h2 class="section">Projects</h2>
+{% for project in resume.projects %}
+<div class="project-line">
+  <span>
+    <span class="project-name">{{ project.name }}</span>{% if project.status %} <span class="project-status">({{ project.status }})</span>{% endif %}
+    <span class="project-dates">({{ project.dates }})</span>
+  </span>
+  <span class="project-tech">{{ project.tech }}</span>
+</div>
+<p class="project-desc">{{ project.description }}</p>
+<ul>
+  {% for bullet in project.bullets %}
+  <li>{{ bullet }}{% if loop.last and project.repo %} &mdash; {{ m.icon('link') }}<a href="{{ project.repo }}">repo</a>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endfor %}
+
+{% if resume.certifications %}
+<h2 class="section">Training &amp; Certificates</h2>
+{% for cert in resume.certifications %}
+<div class="cert-line">
+  <span class="cert-name">{{ cert.name }}</span>
+  <span class="cert-dates">{{ cert.dates }}</span>
+</div>
+<p>{{ cert.details }}{% if cert.verification_url %} Verify at <a href="{{ cert.verification_url }}">{{ cert.verification_url }}</a>.{% endif %}</p>
+{% endfor %}
+{% endif %}
+</body>
+</html>

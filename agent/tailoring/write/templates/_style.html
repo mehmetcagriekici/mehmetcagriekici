@@ -1,0 +1,59 @@
+<style>
+  :root {
+    --accent: #2656A6;
+    --text: #1c1c1c;
+    --muted: #555;
+  }
+  @page { size: A4; margin: {{ margin_mm }}mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: {{ base_font_pt }}pt;
+    line-height: 1.35;
+    color: var(--text);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  .header { margin-bottom: 8pt; }
+  .name-lg { font-size: 26pt; font-weight: 700; color: var(--accent); }
+  .name-xl { font-size: 30pt; font-weight: 700; color: var(--accent); }
+  .contact-line { margin-top: 3pt; font-size: 9.5pt; color: var(--text); }
+  .sep { margin: 0 5pt; color: var(--muted); }
+  .icon { width: 10pt; height: 10pt; vertical-align: -1pt; margin-right: 2pt; }
+  h2.section {
+    font-size: 13.5pt;
+    color: var(--accent);
+    border-bottom: 0.8pt solid var(--accent);
+    margin: 8pt 0 4pt;
+    padding-bottom: 2pt;
+  }
+  ul { margin: 2pt 0 4pt 0; padding-left: 1.1em; }
+  li { margin: 1pt 0; }
+  p { margin: 3pt 0; }
+  .project-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 4pt;
+  }
+  .project-name { font-weight: 700; }
+  .project-status { font-style: italic; font-weight: 400; }
+  .project-dates { font-style: italic; margin-left: 4pt; }
+  .project-tech {
+    font-size: 9pt;
+    color: var(--muted);
+    font-style: italic;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .project-desc { margin: 1pt 0 2pt 0; }
+  .cert-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 4pt;
+  }
+  .cert-name { font-weight: 700; }
+  .cert-dates { font-style: italic; }
+</style>

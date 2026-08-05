@@ -18,6 +18,8 @@ dependencies = [
     "playwright",
     # tailoring — write/write.py: page-count check via the rendered PDF
     "pypdf",
+    # tailoring — write/write.py: renders resume.html / cover_letter.html
+    "jinja2",
 
     # tracking — not yet implemented
 

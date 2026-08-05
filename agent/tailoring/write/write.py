@@ -1,7 +1,9 @@
 # write.py
 import logging
-from html import escape
+from datetime import date
+from pathlib import Path
 
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from playwright.async_api import async_playwright, Playwright
 from pypdf import PdfReader
 
@@ -11,6 +13,30 @@ logger = logging.getLogger(__name__)
 PAGE_WIDTH_MM = 210
 PAGE_HEIGHT_MM = 297
 MARGIN_MM = 15
+BASE_FONT_PT = 10.5
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+_env = Environment(
+    loader=FileSystemLoader(_TEMPLATES_DIR),
+    autoescape=select_autoescape(["html"]),
+)
+
+
+def _today() -> str:
+    today = date.today()
+    return f"{today:%B} {today.day}, {today:%Y}"
+
+
+# Known source_of_truth skill categories (see profile.json) whose label isn't
+# just Title Case of the key with underscores turned to spaces.
+_CATEGORY_LABELS = {
+    "ai_ml": "AI/ML",
+    "devops": "DevOps",
+}
+
+
+def _category_label(category: str) -> str:
+    return _CATEGORY_LABELS.get(category, category.replace("_", " ").title())
 
 
 async def _render(playwright: Playwright, html_content: str, output_path: str) -> None:
@@ -40,69 +66,14 @@ async def _render(playwright: Playwright, html_content: str, output_path: str) -
     await browser.close()
 
 
-async def write(
-    llm_text: str,
-    output_path: str = "page.pdf",
-) -> str | None:
-    # HTML-escape untrusted LLM output before it reaches the page — deterministic
-    # code's job, not the model's (see ../README.md, prompts/README.md).
-    escaped = escape(llm_text).replace("\n", "<br>")
-
-    # @page only sets the printed page's size — it doesn't clip. Content is left
-    # free to flow past one page here; overflow is *detected* after rendering
-    # (page-count check below), never silently truncated, since a resume cut off
-    # mid-sentence must never ship unnoticed.
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>LLM Response</title>
-  <style>
-    @page {{
-      size: A4;
-      margin: {MARGIN_MM}mm;
-    }}
-
-    body {{
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      font-size: 11pt;
-      line-height: 1.45;
-      color: #222;
-    }}
-
-    h1, h2, h3 {{
-      margin: 0.6em 0 0.3em;
-      page-break-after: avoid;
-    }}
-
-    p {{
-      margin: 0.4em 0;
-    }}
-
-    pre, code {{
-      background: #f4f4f4;
-      border-radius: 3px;
-      font-family: ui-monospace, monospace;
-      font-size: 9.5pt;
-    }}
-
-    pre {{
-      padding: 0.6em;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }}
-  </style>
-</head>
-<body>
-  {escaped}
-</body>
-</html>"""
-
+async def _render_to_pdf(html_content: str, output_path: str) -> str | None:
     async with async_playwright() as playwright:
-        await _render(playwright, html, output_path)
+        await _render(playwright, html_content, output_path)
 
+    # @page only sets the printed page's size — it doesn't clip. Templates leave
+    # content free to flow past one page; overflow is *detected* here (page-count
+    # check), never silently truncated, since a resume cut off mid-sentence must
+    # never ship unnoticed.
     page_count = len(PdfReader(output_path).pages)
     if page_count != 1:
         # One page is a hard constraint (../README.md, ../../CLAUDE.md) — an
@@ -115,3 +86,47 @@ async def write(
         return None
 
     return output_path
+
+
+async def write_resume(
+    resume: dict,
+    personal: dict,
+    output_path: str = "resume.pdf",
+) -> str | None:
+    """resume: RESUME_SCHEMA-shaped dict (see prompts/resume.py).
+    personal: profile.json's "personal" block (name/email/phone/location/github/linkedin)."""
+    skills_grouped = [
+        (_category_label(category), items) for category, items in resume["skills"].items()
+    ]
+
+    template = _env.get_template("resume.html")
+    html_content = template.render(
+        resume=resume,
+        personal=personal,
+        skills_grouped=skills_grouped,
+        margin_mm=MARGIN_MM,
+        base_font_pt=BASE_FONT_PT,
+    )
+
+    return await _render_to_pdf(html_content, output_path)
+
+
+async def write_cover_letter(
+    letter: dict,
+    personal: dict,
+    company: str | None = None,
+    output_path: str = "cover_letter.pdf",
+) -> str | None:
+    """letter: COVER_LETTER_SCHEMA-shaped dict (see prompts/cover_letter.py).
+    personal: profile.json's "personal" block (name/email/phone/location/github/linkedin)."""
+    template = _env.get_template("cover_letter.html")
+    html_content = template.render(
+        letter=letter,
+        personal=personal,
+        company=company,
+        today=_today(),
+        margin_mm=MARGIN_MM,
+        base_font_pt=BASE_FONT_PT,
+    )
+
+    return await _render_to_pdf(html_content, output_path)

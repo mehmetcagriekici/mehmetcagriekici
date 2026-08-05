@@ -6,10 +6,12 @@
 # be cleanly attributed per module once transitive deps overlap.
 #
 # Entries below trace back to matching/, ollama==0.6.2 for tailoring/'s
-# llm/client.py, and playwright==1.62.0 plus pypdf==6.14.2 for tailoring/'s
-# write/write.py (Chromium print-to-PDF, then a page-count check on the
-# rendered PDF to detect one-page overflow) — re-freeze this file as other
-# modules add their own deps.
+# llm/client.py, and playwright==1.62.0 plus pypdf==6.14.2 plus jinja2==3.1.6
+# for tailoring/'s write/write.py (Jinja2 templates -> Chromium
+# print-to-PDF -> a page-count check on the rendered PDF to detect one-page
+# overflow) — jinja2 was already present as a transitive dep before this,
+# now also a declared direct one — re-freeze this file as other modules add
+# their own deps.
 #
 # pytest/pytest-playwright/pytest-base-url are present because they're
 # installed in venv (test-writing is the user's own domain, not something

@@ -1,0 +1,19 @@
+{% macro icon(kind) %}{% if kind == 'envelope' %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 6l9 7 9-7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>{% elif kind == 'phone' %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2C9.5 21 3 14.5 3 6a2 2 0 0 1 2-2z" fill="currentColor"/></svg>{% elif kind == 'pin' %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-7.4 7-12a7 7 0 1 0-14 0c0 4.6 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="2.4" fill="currentColor"/></svg>{% elif kind == 'link' %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 15l6-6M10 6h4a4 4 0 0 1 0 8h-1M14 18H10a4 4 0 0 1 0-8h1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>{% endif %}{% endmacro %}
+
+{% macro header(personal, name_class) %}
+<div class="header">
+  <div class="{{ name_class }}">{{ personal.name }}</div>
+  <div class="contact-line">
+    {{ icon('envelope') }}<a href="mailto:{{ personal.email }}">{{ personal.email }}</a>
+    <span class="sep">&middot;</span>
+    {{ icon('phone') }}{{ personal.phone }}
+    <span class="sep">&middot;</span>
+    {{ icon('pin') }}{{ personal.location }}
+  </div>
+  <div class="contact-line">
+    {{ icon('link') }}<a href="{{ personal.github }}">{{ personal.github | replace('https://', '') }}</a>
+    <span class="sep">&middot;</span>
+    {{ icon('link') }}<a href="{{ personal.linkedin }}">{{ personal.linkedin | replace('https://', '') }}</a>
+  </div>
+</div>
+{% endmacro %}

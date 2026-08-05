@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ personal.name }} - Cover Letter</title>
+{% include "_style.html" %}
+</head>
+<body>
+{% import "_macros.html" as m %}
+{{ m.header(personal, 'name-xl') }}
+
+<p>{{ today }}</p>
+
+<p>Hiring Team{% if company %} at {{ company }}{% endif %}</p>
+
+<p>Dear Hiring Team,</p>
+
+<p>{{ letter.opening }}</p>
+
+{% for paragraph in letter.experience.split('\n\n') %}
+<p>{{ paragraph }}</p>
+{% endfor %}
+
+{% if letter.gaps %}
+<p>{{ letter.gaps }}</p>
+{% endif %}
+
+<p>{{ letter.closing }}</p>
+
+<p>Sincerely,<br>{{ personal.name }}</p>
+</body>
+</html>
