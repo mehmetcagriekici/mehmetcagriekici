@@ -20,11 +20,22 @@ class WriteError(Enum):
     to act on). OVERFLOW is specific to write_resume()/write_cover_letter():
     real content that's too long and must route to the user for approve/reject
     (see ../README.md, ../../CLAUDE.md) — parse_application_answers() never
-    produces it, since there's no page to overflow."""
+    produces it, since there's no page to overflow. RENDER_FAILURE is an
+    infrastructure failure during rendering itself (Playwright/Chromium, or an
+    unreadable output PDF) — not raised by write.py, which doesn't catch these;
+    a caller that does catch playwright.async_api.Error / pypdf.errors.PyPdfError
+    around a write_*() call constructs this value itself (see tailoring/generate.py).
+    LLM_FAILURE is earlier still: the Ollama call itself never produced a
+    response (llm.client.OllamaError) — there's no LLM output at all to pass to
+    write_*()/parse_application_answers(), so those functions never see this
+    case either; a caller catches OllamaError and constructs this value itself,
+    same pattern as RENDER_FAILURE."""
 
     INVALID_JSON = "invalid_json"
     VALIDATION_ERROR = "validation_error"
     OVERFLOW = "overflow"
+    RENDER_FAILURE = "render_failure"
+    LLM_FAILURE = "llm_failure"
 
 
 @dataclass
