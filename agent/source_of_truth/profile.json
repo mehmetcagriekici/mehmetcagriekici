@@ -34,6 +34,20 @@
       "repo": "https://github.com/mehmetcagriekici/blightsanest_stable_insights"
     },
     {
+      "name": "Message Notification Router",
+      "status": "complete (hackathon)",
+      "dates": "Aug 2026",
+      "stack": ["Python", "Ollama (qwen2.5, qwen2.5vl/moondream, nomic-embed-text)", "faster-whisper", "unittest"],
+      "description": "24-hour hackathon (HackerRank Orchestrate, August 2026). Fully local, multimodal message-triage system that routes WhatsApp-style messages (text, image posters/screenshots, voice notes) to notify/digest/mute per user, using retrieved message history plus each message's own content — no API keys, no network calls beyond a local Ollama server.",
+      "bullets": [
+        "Five-component pipeline (Organizer for user/group/business trust signals, Retrieval for embedding-based historical evidence, VisionAnalyzer and AudioAnalyzer for image/voice content, LLMReasoner for the final JSON-mode decision) orchestrated by an Agent that wraps every per-message step so one failure degrades to a safe fallback row instead of stopping the run.",
+        "Two safety rules enforced in code rather than left to the prompt — scam/spam message_type always forces action=mute, and a repeated-negative-pattern signal from Retrieval also forces mute — after sample-set validation showed the local 0.5B–7B models didn't reliably self-apply their own stated priority order under JSON-grammar-constrained decoding.",
+        "Cross-checks the LLM's cited evidence_message_ids against what Retrieval actually found, so the model can't invent evidence that was never retrieved; also frames message text, OCR output, and voice transcripts explicitly as untrusted data to classify, with a deliberate prompt-injection test case in the labeled sample set.",
+        "Benchmarked model-size tradeoffs under a CPU-only, prefill-dominated latency budget: defaulted text reasoning to qwen2.5:0.5b to fit the hackathon time window (~86 min vs. ~3 hours for 3B/7B) despite its accuracy being unvalidated against the labeled sample, and switched the vision model from qwen2.5vl:7b to moondream (a measured ~50-60x speedup) after confirming risk-classification accuracy held even though OCR completeness on dense posters got measurably weaker."
+      ],
+      "repo": "https://github.com/mehmetcagriekici/hackerrank-orchestrate-august26"
+    },
+    {
       "name": "AI Damage-Claim Verification Agent",
       "status": "complete (hackathon)",
       "dates": "June 2026",
