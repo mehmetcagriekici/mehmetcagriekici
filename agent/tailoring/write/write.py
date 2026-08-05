@@ -8,18 +8,19 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from playwright.async_api import async_playwright, Playwright
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from pypdf import PdfReader
 
 logger = logging.getLogger(__name__)
 
 
 class WriteError(Enum):
-    """Why a write_*() call didn't produce a path — a caller needs to tell
-    these apart: INVALID_JSON/VALIDATION_ERROR are a broken LLM response (no
-    content exists to show anyone), OVERFLOW is real content that's too long
-    and must route to the user for approve/reject (see ../README.md,
-    ../../CLAUDE.md)."""
+    """Why a call didn't produce a result — a caller needs to tell these apart:
+    INVALID_JSON/VALIDATION_ERROR are a broken LLM response (no content exists
+    to act on). OVERFLOW is specific to write_resume()/write_cover_letter():
+    real content that's too long and must route to the user for approve/reject
+    (see ../README.md, ../../CLAUDE.md) — parse_application_answers() never
+    produces it, since there's no page to overflow."""
 
     INVALID_JSON = "invalid_json"
     VALIDATION_ERROR = "validation_error"
@@ -30,6 +31,20 @@ class WriteError(Enum):
 class WriteResult:
     path: str | None
     error: WriteError | None = None
+
+
+@dataclass
+class ParseResult:
+    answers: dict[str, str] | None
+    error: WriteError | None = None
+
+
+# The application call's field_ids are posting-specific (whatever form fields
+# that job's application asks) — there's no fixed schema like RESUME_SCHEMA to
+# name a pydantic model's fields after, so this validates only the structural
+# shape the prompt actually promises (prompts/application.py: "a JSON object
+# mapping each field_id to its answer as a string").
+_ApplicationAnswers = TypeAdapter(dict[str, str])
 
 
 # A4 page size, matching the root cover-letter workflow's page geometry
@@ -176,6 +191,22 @@ async def write_resume(
     )
 
     return await _render_to_pdf(html_content, output_path)
+
+
+def parse_application_answers(llm_response: str) -> ParseResult:
+    """llm_response: the application call's raw JSON string ({field_id: answer},
+    see prompts/application.py). No template, no PDF — form_automation/ (not yet
+    built) is the intended consumer of the returned dict."""
+    try:
+        answers = _ApplicationAnswers.validate_python(json.loads(llm_response))
+    except json.JSONDecodeError as e:
+        logger.warning("parse_application_answers: invalid JSON: %s", e)
+        return ParseResult(answers=None, error=WriteError.INVALID_JSON)
+    except ValidationError as e:
+        logger.warning("parse_application_answers: schema validation failed: %s", e)
+        return ParseResult(answers=None, error=WriteError.VALIDATION_ERROR)
+
+    return ParseResult(answers=answers)
 
 
 async def write_cover_letter(
