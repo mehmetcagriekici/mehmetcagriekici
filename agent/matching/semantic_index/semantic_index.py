@@ -1,69 +1,84 @@
+import numpy as np
 from sentence_transformers import SentenceTransformer
-from constants.constants import SEARCH_LIMIT
-from helpers.helpers import cosine_similarity, semantic_chunk
-from custom_types.custom_types import Document
+
+from matching.constants.constants import (
+    CHUNK_OVERLAP_TOKENS,
+    CHUNK_TOKENS,
+    EMBEDDING_MODEL,
+    SEARCH_LIMIT,
+)
+from matching.custom_types.custom_types import Document
+from matching.helpers.helpers import token_window_chunks
+
+# loaded models, by name -- loading from disk takes seconds, and every
+# evaluate_posting() call builds a fresh SemanticIndex. This caches the model
+# only; embeddings are still recomputed on every call, per the no-caching
+# design (see ../README.md).
+_models: dict[str, SentenceTransformer] = {}
+
+
+def _load_model(model_name: str) -> SentenceTransformer:
+    if model_name not in _models:
+        _models[model_name] = SentenceTransformer(model_name)
+    return _models[model_name]
+
 
 # semantic indexing class with chunking
 class SemanticIndex:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
-        self.model = SentenceTransformer(model_name)
+    def __init__(self, model_name: str = EMBEDDING_MODEL) -> None:
+        self.model = _load_model(model_name)
         self.documents = None
         self.docmap = {}
         self.chunk_embeddings = None
         self.chunk_metadata = None
 
-    # generate an embedding using the model for a text
-    def generate_embedding(self, text: str):
-        # check if the text is empty
-        if text.strip() == "":
-            raise ValueError("text to be embedded is empty")
-        embeddings = self.model.encode([text])
-        return embeddings[0]
+    # split a text into model-token windows (see helpers.token_window_chunks)
+    def chunk(self, text: str) -> list[str]:
+        return token_window_chunks(text, self.model.tokenizer, CHUNK_TOKENS, CHUNK_OVERLAP_TOKENS)
+
+    # embed texts as unit vectors, so a dot product is the cosine similarity
+    def embed(self, texts: list[str]) -> np.ndarray:
+        return self.model.encode(texts, normalize_embeddings=True)
 
     # build embeddings for the documents
     def build_chunk_embeddings(self, documents: list[Document]):
         self.documents = documents
-        # lists to keep chunks and chunk metedata
+        # lists to keep chunks and chunk metadata
         chunks = []
         chunk_metadata = []
 
-        # iterate over the documents
-        for i in range(len(documents)):
-            document = documents[i]
+        for document in documents:
             # keep the docmap current so chunks can always be hydrated back
             # to their document through the stable document_id
             self.docmap[document.id] = document
-            # if document content is empty move to the next iteration
-            if document.content == "":
-                continue
 
-            # create chunks from the document contents
-            curr_chunks = semantic_chunk(document.content, 4, 1)
-            # iterate over the chunks
-            for j in range(len(curr_chunks)):
-                # add curr_chunk to the chunks
-                chunks.append(curr_chunks[j])
-                # create chunk metada
-                metadata = {
+            curr_chunks = self.chunk(document.content)
+            for j, chunk in enumerate(curr_chunks):
+                chunks.append(chunk)
+                chunk_metadata.append(
+                    {
                         "document_id": document.id,
                         "chunk_index": j,
                         "total_chunks": len(curr_chunks),
-                        }
-                # add chunk metadata to chunk metadata
-                chunk_metadata.append(metadata)
+                    }
+                )
 
         # create embeddings from the chunks
-        self.chunk_embeddings = self.model.encode(chunks)
-        # assign chunk metadata
+        self.chunk_embeddings = self.embed(chunks)
         self.chunk_metadata = chunk_metadata
 
         return self.chunk_embeddings
 
-    # semantic chunk search
+    # semantic chunk search. The query is chunked the same way as the
+    # documents -- a whole posting runs past the model's input limit, and
+    # embedding it in one piece silently dropped its tail (requirements and
+    # nice-to-haves come last). A document's score is its best-matching
+    # (query chunk, document chunk) pair: the one place where some part of the
+    # posting and some part of the fact line up most closely.
     def search_chunks(self, query: str, limit: int = SEARCH_LIMIT):
         # make sure chunk embeddings exists
         if self.chunk_embeddings is None:
-            raise ValueError("chunk embedings is none")
+            raise ValueError("chunk embeddings is none")
 
         # make sure chunk metadata exists
         if self.chunk_metadata is None:
@@ -73,22 +88,25 @@ class SemanticIndex:
         if self.documents is None:
             raise ValueError("documents is none")
 
-        # generate an embedding from the query
-        query_embedding = self.generate_embedding(query)
+        query_chunks = self.chunk(query)
+        if not query_chunks:
+            raise ValueError("text to be embedded is empty")
+        query_embeddings = self.embed(query_chunks)
 
-        # document similarity_scores, and which chunk index produced each one
+        # similarity of every document chunk to its best-matching query chunk
+        chunk_scores = (query_embeddings @ self.chunk_embeddings.T).max(axis=0)
+
+        # document similarity scores, and which chunk index produced each one
         document_scores = {}
         document_best_chunk = {}
-        # iterate over the chunks
-        for i in range(len(self.chunk_embeddings)):
-            # create a similarity score between the query embedding and current chunk embedding
-            similarity_score = cosine_similarity(query_embedding, self.chunk_embeddings[i])
-            # get chunk metadata
-            metadata = self.chunk_metadata[i]
-            document_id = metadata["document_id"]
+        for i, similarity_score in enumerate(chunk_scores):
+            document_id = self.chunk_metadata[i]["document_id"]
             # if the document score does not exist, or the current chunk scores
             # higher than the previous best chunk for this document, update both
-            if document_id not in document_scores or document_scores[document_id] < similarity_score:
+            if (
+                document_id not in document_scores
+                or document_scores[document_id] < similarity_score
+            ):
                 document_scores[document_id] = similarity_score
                 document_best_chunk[document_id] = i
 
@@ -104,12 +122,13 @@ class SemanticIndex:
                 continue
             # metadata from the specific chunk that produced the winning score
             metadata = self.chunk_metadata[document_best_chunk[document_id]]
-            result = {
+            results.append(
+                {
                     "id": document.id,
                     "content": document.content,
-                    "score": round(score, 4),
+                    "score": round(float(score), 4),
                     "metadata": metadata,
-                    }
-            results.append(result)
+                }
+            )
 
         return results

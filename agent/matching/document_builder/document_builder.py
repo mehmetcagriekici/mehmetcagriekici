@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 
-from custom_types.custom_types import Document
+from matching.custom_types.custom_types import Document
+
+logger = logging.getLogger(__name__)
 
 # intentionally left out of the matching corpus:
 # - profile["personal"] (contact info, not a fit signal)
@@ -9,6 +12,13 @@ from custom_types.custom_types import Document
 #   "fit" search so protected-characteristic text can never influence a match score)
 # - profile["screening_answers"] (generated per-application, not a stored fact)
 # - profile["work_experience"] (currently empty)
+
+
+# ensure_ascii=False keeps non-ASCII text as-is ("München", "Açıköğretim")
+# instead of \u escapes, which split words for BM25 and read as noise to the
+# embedding model
+def _dumps(value) -> str:
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _load_json(path: str):
@@ -21,7 +31,7 @@ def _skill_documents(profile: dict) -> list[Document]:
     for category, skills in profile.get("skills", {}).items():
         for skill in skills:
             fact = {"category": category, "skill": skill}
-            documents.append(Document(id=f"skill:{category}:{skill}", content=json.dumps(fact)))
+            documents.append(Document(id=f"skill:{category}:{skill}", content=_dumps(fact)))
     return documents
 
 
@@ -33,17 +43,25 @@ def _project_documents(profile: dict, projects_detail: dict) -> list[Document]:
     for project in profile.get("projects", []):
         merged = dict(project)
         detail = detail_by_name.get(project["name"])
-        if detail is not None:
+        if detail is None:
+            # still indexed, just without incident-level material -- usually a
+            # new project not yet written up in projects-detail.json, or a name
+            # that differs slightly between the two files
+            logger.warning(
+                "document_builder: no projects-detail.json entry for project %r",
+                project["name"],
+            )
+        else:
             merged["planning_process"] = detail.get("planning_process")
             merged["structure"] = detail.get("structure")
             merged["turning_points"] = detail.get("turning_points")
-        documents.append(Document(id=f"project:{project['name']}", content=json.dumps(merged)))
+        documents.append(Document(id=f"project:{project['name']}", content=_dumps(merged)))
     return documents
 
 
 def _certification_documents(profile: dict) -> list[Document]:
     return [
-        Document(id=f"certification:{c['name']}", content=json.dumps(c))
+        Document(id=f"certification:{c['name']}", content=_dumps(c))
         for c in profile.get("certifications", [])
     ]
 
@@ -52,7 +70,7 @@ def _education_document(profile: dict) -> list[Document]:
     education = profile.get("education")
     if not education:
         return []
-    return [Document(id="education", content=json.dumps(education))]
+    return [Document(id="education", content=_dumps(education))]
 
 
 def _experience_document(profile: dict) -> list[Document]:
@@ -63,26 +81,26 @@ def _experience_document(profile: dict) -> list[Document]:
         "professional_experience_note": note,
         "years_of_professional_experience": profile.get("years_of_professional_experience"),
     }
-    return [Document(id="professional_experience", content=json.dumps(fact))]
+    return [Document(id="professional_experience", content=_dumps(fact))]
 
 
 def _job_preference_documents(profile: dict) -> list[Document]:
     documents = []
     for key, value in profile.get("job_preferences", {}).items():
-        documents.append(Document(id=f"job_preference:{key}", content=json.dumps({key: value})))
+        documents.append(Document(id=f"job_preference:{key}", content=_dumps({key: value})))
     return documents
 
 
 def _known_gap_documents(known_gaps: dict) -> list[Document]:
     return [
-        Document(id=f"known_gap:{gap['gap']}", content=json.dumps(gap))
+        Document(id=f"known_gap:{gap['gap']}", content=_dumps(gap))
         for gap in known_gaps.get("known_gaps", [])
     ]
 
 
 def _general_story_documents(general_stories: dict) -> list[Document]:
     return [
-        Document(id=f"story:{story['id']}", content=json.dumps(story))
+        Document(id=f"story:{story['id']}", content=_dumps(story))
         for story in general_stories.get("general_stories", [])
     ]
 
@@ -90,7 +108,7 @@ def _general_story_documents(general_stories: dict) -> list[Document]:
 def _preference_documents(preferences: dict) -> list[Document]:
     documents = []
     for key, value in preferences.get("preferences", {}).items():
-        documents.append(Document(id=f"preference:{key}", content=json.dumps({key: value})))
+        documents.append(Document(id=f"preference:{key}", content=_dumps({key: value})))
     return documents
 
 
@@ -118,4 +136,4 @@ def build_source_of_truth_documents(source_of_truth_dir: str) -> list[Document]:
 # job postings arrive from sourcing as JSON already, so the query string is
 # just that JSON serialized — no per-ATS flattening logic needed
 def job_posting_to_query(job_posting: dict) -> str:
-    return json.dumps(job_posting)
+    return _dumps(job_posting)

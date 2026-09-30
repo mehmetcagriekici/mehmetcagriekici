@@ -14,7 +14,7 @@ One call, `hybrid_search(job_posting, source_of_truth)`, per posting. No chained
 
 **Pass/fail signal:** `rrf_search`'s fused `rrf_score`, as returned. Known imprecision, accepted: it's rank-based (`1 / (rank + 60)`), not similarity-magnitude, so a corpus's top-ranked fact scores in roughly the same range whether it's a strong match or just the least-bad option available.
 
-**Threshold:** a posting passes when at least 4 distinct facts score `rrf_score` ≥ 0.028 against it. This value was empirically tuned — an initial guess didn't separate a mismatched test posting from a genuinely relevant one; 0.028 does. Stress-tested against several synthetic postings (see `fixtures/postings/`) — all clear comfortably, so the cutoff is validated for "clearly relevant vs. clearly irrelevant" but not yet against a real near-miss case or real ATS data.
+**Threshold:** a posting passes when at least 4 distinct facts score `rrf_score` ≥ 0.029 against it. Recalibrated 2026-09-30 (was 0.028, originally tuned 2026-07-22 from a 0.026 guess): token-window chunking and the BM25 punctuation fix changed the rankings, and 0.028 had already stopped separating anything on the current corpus — the `sales_manager_mismatch.json` fixture passed with 8 facts. 0.029 is the only value in the 0.026–0.032 sweep that separates the fixtures: the three relevant postings keep 5/5/9 facts, the mismatch 3. **Thin margin** (5 vs. 3) on only four synthetic fixtures — validated for "clearly relevant vs. clearly irrelevant", not against a near-miss case or real ATS data, and the corpus changing (a new project, a new story) can move it again; re-run `scripts/calibrate_threshold.py` after any `source_of_truth` change.
 
 **Known blind spot:** `rrf_score` has no concept of polarity. On one test posting, `known_gap:visa_sponsorship_needed` scored as a *matching* fact against a posting that explicitly offers no sponsorship — the two texts share vocabulary even though the posting is a disqualifying mismatch. Matching was always designed to be blind to deal-breakers like this (see Soft/inferred requirements below); worth flagging for `review_gate/`, since a "passed" match says nothing about whether the matched facts are actually favorable.
 
@@ -24,7 +24,7 @@ Sourcing applies no pre-filter — role/location/tech fit is decided entirely he
 
 ## Document construction
 
-`document_builder/document_builder.py`'s `build_source_of_truth_documents()` loads the five `source_of_truth` files and produces one `Document` per atomic fact (skills, projects — merged across `profile.json` and `projects-detail.json` by name — certifications, education, professional-experience note, each `job_preferences` field, each known-gap, each story, each preference item). `job_posting_to_query()` is `json.dumps()` on the posting dict.
+`document_builder/document_builder.py`'s `build_source_of_truth_documents()` loads the five `source_of_truth` files and produces one `Document` per atomic fact (skills, projects — merged across `profile.json` and `projects-detail.json` by name — certifications, education, professional-experience note, each `job_preferences` field, each known-gap, each story, each preference item). `job_posting_to_query()` is `json.dumps()` on the posting dict. Both use `ensure_ascii=False`, so non-ASCII text ("München", "Açıköğretim") stays intact instead of becoming `\u` escapes that split words. A project in `profile.json` with no matching `projects-detail.json` entry (by exact name) is still indexed, without the incident-level detail, and logs a warning.
 
 Excluded from the corpus: `profile["personal"]` (not a fit signal), `profile["eeo"]` (kept out so protected-characteristic text never influences a match score), and the empty `screening_answers`/`work_experience` fields.
 
@@ -39,18 +39,18 @@ Excluded from the corpus: `profile["personal"]` (not a fit signal), `profile["ee
 Adapted from an older RAG project, stripped of parts specific to that project (S3/Redis storage, msgpack conversion, multi-tenant plumbing) — this module has no caching layer and no user concept.
 
 - `inverted_index/` — BM25 keyword search over `Document`s, built fresh per query.
-- `semantic_index/` — sentence-transformers (`all-MiniLM-L6-v2`) embeddings, chunked per document, cosine similarity.
-- `helpers/` — shared stateless pieces: `cosine_similarity`, `calc_rrf_score`, tokenization, chunking.
+- `semantic_index/` — sentence-transformers (`all-MiniLM-L6-v2`) embeddings, cosine similarity. Both facts and the posting are split into 128-token windows (32 overlap) measured in the model's own tokens — the model silently truncates past 256 tokens (a project fact runs up to ~1500, a posting ~350, and a posting's requirements come last), and it was trained on 128-token sequences. A fact's score is its best (posting chunk, fact chunk) pair. The model itself is loaded once per process and reused; embeddings are still recomputed on every call.
+- `helpers/` — shared stateless pieces: `calc_rrf_score`, tokenization (English stopwords and JSON punctuation dropped — every `json.dumps`'d fact and posting shares `{ } : ,` and quote tokens, which only added BM25 noise), token-window chunking.
 - `hybrid_search/` — fuses the BM25 and semantic ranked lists via `calc_rrf_score` (`HybridSearch.rrf_search`). A corpus+query search primitive, not a pass/fail gate by itself.
 - `document_builder/` — turns the `source_of_truth` files (plus a posting) into `Document`s / a query string.
 - `matcher/` — `evaluate_posting()` ties `document_builder` and `hybrid_search` together and applies the threshold rule (`is_match`) to produce the pass/fail verdict.
 
 ## Reproducibility
 
-`../requirements.txt` (pinned freeze) and `../pyproject.toml` (direct deps, grouped by module — matching's are `numpy`, `nltk`, `sentence-transformers`, `pydantic`) live at `agent/`, shared across the whole Python service. The venv lives at `../venv`, gitignored. `torch` installs as a `+cpu` build; if PyPI alone can't resolve it, add `--extra-index-url https://download.pytorch.org/whl/cpu`.
+`../requirements.txt` (pinned freeze) and `../pyproject.toml` (direct deps, grouped by module — matching's are `numpy`, `nltk`, `sentence-transformers`, `pydantic`) live at `agent/`, shared across the whole Python service. The venv lives at `../venv`, gitignored. `torch` installs as a `+cpu` build from PyTorch's own index, which `requirements.txt` declares itself (`--extra-index-url`).
 
 ## Calibration fixtures
 
-`fixtures/postings/` holds synthetic job postings used to stress-test the threshold — run via `python scripts/calibrate_threshold.py`, which prints each posting's pass/fail and matching-fact breakdown. Not a pytest suite — a manual calibration script.
+`fixtures/postings/` holds synthetic job postings used to stress-test the threshold — run via `python scripts/calibrate_threshold.py`, which prints each posting's pass/fail and matching-fact breakdown, checks it against the script's `EXPECTED` verdicts (relevant postings must pass, `sales_manager_mismatch.json` must fail), and exits non-zero if any fixture gets the wrong verdict. Not a pytest suite — a manual calibration script.
 
 Status: design and code complete, pending recalibration against real ATS data. See `../CLAUDE.md`.

@@ -1,22 +1,26 @@
 import math
 from collections import Counter, defaultdict
 
-from constants.constants import BM25_B, BM25_K1, SEARCH_LIMIT
-from helpers.helpers import tokenize
-from custom_types.custom_types import Document
+from matching.constants.constants import BM25_B, BM25_K1, SEARCH_LIMIT
+from matching.custom_types.custom_types import Document
+from matching.helpers.helpers import tokenize
+
 
 class InvertedIndex:
     def __init__(self) -> None:
-        # a dcitionary mapping tokens to set of document ids
+        # a dictionary mapping tokens to set of document ids
         self.index: dict[str, set[str]] = {}
         # a dictionary mapping document ids to their full document objects
         self.docmap = {}
-        # a dictonary mapping document ids to term frequencies
+        # a dictionary mapping document ids to term frequencies
         self.term_frequencies = defaultdict(Counter)
         # a dictionary mapping document ids to their lengths
         self.doc_lengths: dict[str, int] = {}
+        # average document length, computed once when the index is built
+        # rather than re-summed for every (document, term) pair scored
+        self.avg_doc_length = 0.0
 
- # tokenize document content (text), add each token to the index with the document id
+    # tokenize document content (text), add each token to the index with the document id
     def add_document(self, text: str, doc_id: str) -> None:
         # tokenize the document content
         tokens = tokenize(text)
@@ -41,12 +45,13 @@ class InvertedIndex:
     # get the set of document ids of a token
     def get_documents(self, token: str) -> set[str]:
         return self.index.get(token) or set()
-    
+
     # iterate over all the documents and add them to the docmap and the index
     def build(self, documents: list[Document]):
         for doc in documents:
             self.docmap[doc.id] = doc
             self.add_document(doc.content, doc.id)
+        self.avg_doc_length = self.get_avg_doc_length()
 
     # get the frequency of a single token
     def get_tf(self, doc_id: str, token: str) -> int:
@@ -65,7 +70,7 @@ class InvertedIndex:
 
     # calculate the saturated idf score
     def get_bm25_tf(self, doc_id: str, token: str) -> float:
-        avg_len = self.get_avg_doc_length()
+        avg_len = self.avg_doc_length
         length_norm = 1
         # calc length norm of the document
         if avg_len != 0:
@@ -83,7 +88,7 @@ class InvertedIndex:
 
     # implement the bm25 search algorithm. results are returned sorted by
     # score, descending, so callers never need to re-sort them.
-    def bm25_search(self, query: str, limit: int=SEARCH_LIMIT) -> dict[str, float]:
+    def bm25_search(self, query: str, limit: int = SEARCH_LIMIT) -> dict[str, float]:
         # tokenize the query
         tokens = tokenize(query)
         scores = defaultdict(float)

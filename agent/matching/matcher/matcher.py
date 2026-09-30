@@ -1,6 +1,9 @@
-from constants.constants import MATCH_RRF_THRESHOLD, MATCH_MIN_FACTS
-from document_builder.document_builder import build_source_of_truth_documents, job_posting_to_query
-from hybrid_search.hybrid_search import HybridSearch
+from matching.constants.constants import MATCH_MIN_FACTS, MATCH_RRF_THRESHOLD
+from matching.document_builder.document_builder import (
+    build_source_of_truth_documents,
+    job_posting_to_query,
+)
+from matching.hybrid_search.hybrid_search import HybridSearch
 
 
 # turns hybrid_search's ranked output into the actual go/no-go verdict
@@ -28,10 +31,9 @@ def evaluate_posting(
     results = search.rrf_search(query)
 
     matching_facts = [r for r in results if r["rrf_score"] >= threshold]
-    passed = len(matching_facts) >= min_facts
 
     return {
-        "passed": passed,
+        "passed": is_match(results, threshold, min_facts),
         "matching_fact_ids": [r["doc_id"] for r in matching_facts],
         "matching_fact_count": len(matching_facts),
         "results": results,

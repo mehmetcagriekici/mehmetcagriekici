@@ -1,8 +1,9 @@
-from constants.constants import SEARCH_LIMIT
-from helpers.helpers import calc_rrf_score
-from semantic_index.semantic_index import SemanticIndex
-from inverted_index.inverted_index import InvertedIndex
-from custom_types.custom_types import Document
+from matching.constants.constants import SEARCH_LIMIT
+from matching.custom_types.custom_types import Document
+from matching.helpers.helpers import calc_rrf_score
+from matching.inverted_index.inverted_index import InvertedIndex
+from matching.semantic_index.semantic_index import SemanticIndex
+
 
 # main search engine
 class HybridSearch:
@@ -69,13 +70,15 @@ class HybridSearch:
                 content = document.content if document is not None else ""
 
             # create the rrf score object and append it to the scores
-            rrf_scores.append({
-                "doc_id": doc_id,
-                "content": content,
-                "bm25_rank": bm25_rank,
-                "semantic_rank": semantic_rank,
-                "rrf_score": rrf_score,
-                })
+            rrf_scores.append(
+                {
+                    "doc_id": doc_id,
+                    "content": content,
+                    "bm25_rank": bm25_rank,
+                    "semantic_rank": semantic_rank,
+                    "rrf_score": rrf_score,
+                }
+            )
 
         # sort the rrf scores
         return sorted(rrf_scores, key=lambda score: score["rrf_score"], reverse=True)

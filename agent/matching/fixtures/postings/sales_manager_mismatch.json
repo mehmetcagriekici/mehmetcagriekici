@@ -1,0 +1,26 @@
+{
+  "id": "posting-sales-001",
+  "title": "Regional Sales Manager",
+  "company": "Halvorsen Industrial Supply",
+  "location": "Hamburg, Germany (field-based, travel across Northern Germany)",
+  "employment_type": "full-time",
+  "description": "Halvorsen supplies industrial fasteners, tooling, and maintenance products to manufacturers across Northern Germany. We're looking for a Regional Sales Manager to own a territory of existing accounts, grow new business with mid-sized manufacturers, and hit quarterly revenue targets. You'll spend most of the week visiting customer sites, negotiating contracts, and working closely with our inside sales and logistics teams.",
+  "requirements": [
+    "5+ years of B2B field sales experience, ideally in industrial or manufacturing supply",
+    "Proven track record of meeting or exceeding revenue quotas",
+    "Strong negotiation and relationship-building skills with purchasing managers",
+    "Experience managing a sales pipeline in a CRM such as Salesforce",
+    "Fluent German and good English",
+    "Valid EU driving licence and willingness to travel up to 4 days a week"
+  ],
+  "nice_to_have": [
+    "Technical background in mechanical engineering or maintenance",
+    "Existing network of manufacturing customers in Northern Germany"
+  ],
+  "salary_range": {
+    "min": 60000,
+    "max": 80000,
+    "period": "year",
+    "currency": "EUR"
+  }
+}
