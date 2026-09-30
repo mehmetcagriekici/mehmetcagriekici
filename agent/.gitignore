@@ -10,3 +10,7 @@ __pycache__/
 
 # Claude Code local settings
 .claude/
+
+# setuptools build output (pip install / pip wheel)
+build/
+*.egg-info/

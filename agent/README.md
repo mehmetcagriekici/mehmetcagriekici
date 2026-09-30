@@ -37,6 +37,23 @@ The Python and TypeScript services are shared singletons every Go instance calls
 
 **Review notifications:** email, via a dedicated Gmail account. A push email fires immediately when something routes to review, with approve/reject links; unanswered items default to reject once the instance's run ends. The email shows the full generated package inline (not attachments, not summarized) plus why it was flagged. A separate end-of-run report summarizes each instance's whole run (submitted / matched-but-not-submitted / skipped / errors). The approve/reject link opens a one-tap confirm page (not a bare GET, to avoid email scanners auto-triggering it), reachable via a Cloudflare Tunnel — chosen over Tailscale so it opens in any browser with no app install. Needs a domain (not yet owned) and a token-protected link, since the endpoint is public.
 
+## Python service setup
+
+From `agent/` (the single import root — every module imports as `matching.x` / `tailoring.x`):
+
+```sh
+python -m venv venv && . venv/bin/activate
+pip install -r requirements.txt           # pinned; declares PyTorch's CPU-only index itself
+pip install -e . --no-deps                # makes matching/ and tailoring/ importable
+playwright install --with-deps chromium   # tailoring/write renders PDFs via headless Chromium
+sudo apt install fonts-liberation         # the templates pin Liberation Sans (see below)
+ollama pull qwen2.5:14b                   # tailoring/llm's default model (~9 GB)
+```
+
+The same steps belong in the container image once one exists. `fonts-liberation` matters beyond looks: the one-page check counts the rendered PDF's pages, so a machine falling back to a different font could flip identical content between one and two pages.
+
+Lint/format with `uvx ruff check .` and `uvx ruff format .` (config in `pyproject.toml`; not a project dependency).
+
 ## Tech stack
 
 | Service | Language | Owns |

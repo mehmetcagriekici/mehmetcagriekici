@@ -31,3 +31,32 @@ dependencies = [
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+# agent/ is the single import root: every module imports as matching.x /
+# tailoring.x. Listed explicitly because agent/ also holds non-package folders
+# (source_of_truth/, sourcing/, venv/, ...) that setuptools' flat-layout
+# auto-discovery would otherwise refuse to guess around.
+[tool.setuptools.packages.find]
+include = ["matching*", "tailoring*"]
+
+# the Jinja2 templates write/write.py renders -- not Python, so they have to be
+# declared to ship with a non-editable install (e.g. the Docker image)
+[tool.setuptools.package-data]
+"tailoring.write" = ["templates/*.html"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["venv"]
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle errors/warnings, import sorting
+select = ["F", "E", "W", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["matching", "tailoring"]
+
+[tool.ruff.lint.per-file-ignores]
+# prompt text is sent to the LLM verbatim -- wrapping these string literals
+# would change the prompt itself, not just its formatting
+"tailoring/prompts/*" = ["E501"]
