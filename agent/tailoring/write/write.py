@@ -1,26 +1,34 @@
-# write.py
+import copy
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
 from pathlib import Path
+from typing import Annotated
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from playwright.async_api import async_playwright, Playwright
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from playwright.async_api import Playwright, async_playwright
+from pydantic import AfterValidator, BaseModel, BeforeValidator, TypeAdapter, ValidationError
 from pypdf import PdfReader
 
 logger = logging.getLogger(__name__)
 
 
 class WriteError(Enum):
-    """Why a call didn't produce a result — a caller needs to tell these apart:
+    """Why a call didn't produce a usable result — a caller needs to tell these apart:
     INVALID_JSON/VALIDATION_ERROR are a broken LLM response (no content exists
-    to act on). OVERFLOW is specific to write_resume()/write_cover_letter():
+    to act on) — this includes a "not provided" placeholder in a required
+    resume/cover-letter field, and application answers whose keys don't match
+    the questions asked. OVERFLOW is specific to write_resume()/write_cover_letter():
     real content that's too long and must route to the user for approve/reject
-    (see ../README.md, ../../CLAUDE.md) — parse_application_answers() never
-    produces it, since there's no page to overflow. RENDER_FAILURE is an
+    (see ../README.md, ../../CLAUDE.md) — the result still carries the parsed
+    content and the rendered file's path, for the review email and tracking/.
+    parse_application_answers() never produces it, since there's no page to
+    overflow. UNANSWERED/ANSWER_TOO_LONG are its counterparts: real answers exist
+    (returned alongside the error) but at least one says "not provided" or is
+    over the question's max_length, so the application needs human review
+    before anything is submitted. RENDER_FAILURE is an
     infrastructure failure during rendering itself (Playwright/Chromium, or an
     unreadable output PDF) — not raised by write.py, which doesn't catch these;
     a caller that does catch playwright.async_api.Error / pypdf.errors.PyPdfError
@@ -36,18 +44,56 @@ class WriteError(Enum):
     OVERFLOW = "overflow"
     RENDER_FAILURE = "render_failure"
     LLM_FAILURE = "llm_failure"
+    UNANSWERED = "unanswered"
+    ANSWER_TOO_LONG = "answer_too_long"
 
 
+# content is the parsed Resume/CoverLetter whenever the LLM response parsed and
+# validated — including on OVERFLOW, where path also points at the rendered
+# (too-long) file. The review email and tracking/ need the full text, and the
+# on-disk PDF is deleted once the application concludes (../../CLAUDE.md), so
+# the text can't be recovered from the file later.
 @dataclass
 class WriteResult:
     path: str | None
     error: WriteError | None = None
+    content: "Resume | CoverLetter | None" = None
 
 
+# flagged: per-field reason for UNANSWERED/ANSWER_TOO_LONG, so the review email
+# can point at the exact questions that need attention.
 @dataclass
 class ParseResult:
     answers: dict[str, str] | None
     error: WriteError | None = None
+    flagged: dict[str, WriteError] = field(default_factory=dict)
+
+
+# The placeholder the system prompt tells the model to use when the facts don't
+# cover a question (prompts/system_prompt.py). Legitimate only in application
+# form answers; in a resume or cover letter it would be printed straight into
+# the PDF, so optional fields drop it and required fields reject it.
+NOT_PROVIDED = "not provided"
+
+
+def _is_placeholder(value: str) -> bool:
+    return value.strip().rstrip(".").lower() in ("", NOT_PROVIDED)
+
+
+def _reject_placeholder(value: str) -> str:
+    if _is_placeholder(value):
+        raise ValueError(f"placeholder {value!r} in a required field")
+    return value
+
+
+def _placeholder_to_none(value: object) -> object:
+    if isinstance(value, str) and _is_placeholder(value):
+        return None
+    return value
+
+
+RequiredText = Annotated[str, AfterValidator(_reject_placeholder)]
+OptionalText = Annotated[str | None, BeforeValidator(_placeholder_to_none)]
 
 
 # The application call's field_ids are posting-specific (whatever form fields
@@ -56,6 +102,22 @@ class ParseResult:
 # shape the prompt actually promises (prompts/application.py: "a JSON object
 # mapping each field_id to its answer as a string").
 _ApplicationAnswers = TypeAdapter(dict[str, str])
+
+
+# Structured-output schema for the application call, built per posting: exactly
+# one required string per real field_id, nothing else allowed -- so the model
+# can't return the prompt example's placeholder keys ("field_id_1") the way the
+# 2026-08-05 run did. max_length is deliberately left out: constrained decoding
+# would enforce it by cutting the answer off mid-sentence, silently -- it needs
+# a real check after generation instead.
+def application_answers_schema(questions: list[dict]) -> dict:
+    field_ids = [q["field_id"] for q in questions]
+    return {
+        "type": "object",
+        "properties": {field_id: {"type": "string"} for field_id in field_ids},
+        "required": field_ids,
+        "additionalProperties": False,
+    }
 
 
 # A4 page size, matching the root cover-letter workflow's page geometry
@@ -75,35 +137,63 @@ _env = Environment(
 # response before it reaches the template, instead of a raw KeyError/TypeError
 # surfacing from inside Jinja rendering on a malformed field.
 class Project(BaseModel):
-    name: str
-    dates: str
-    tech: str
-    description: str
-    bullets: list[str]
-    status: str | None = None
-    repo: str | None = None
+    name: RequiredText
+    dates: RequiredText
+    tech: RequiredText
+    description: RequiredText
+    bullets: list[RequiredText]
+    status: OptionalText = None
+    repo: OptionalText = None
 
 
 class Certification(BaseModel):
-    name: str
-    dates: str
-    details: str
-    verification_url: str | None = None
+    name: RequiredText
+    dates: RequiredText
+    details: RequiredText
+    verification_url: OptionalText = None
 
 
 class Resume(BaseModel):
-    summary: str
-    skills: dict[str, list[str]]
+    summary: RequiredText
+    skills: dict[str, list[RequiredText]]
     projects: list[Project]
     certifications: list[Certification] = []
 
 
 # Mirrors COVER_LETTER_SCHEMA in prompts/cover_letter.py.
+# Field order is generation order: Ollama's constrained decoding writes the
+# JSON fields in schema order, so the gaps paragraph comes before the closing
+# (with closing first, a 2026-09-30 run spilled gap content into the closing
+# before the gaps paragraph existed).
 class CoverLetter(BaseModel):
-    opening: str
-    experience: str
-    closing: str
-    gaps: str | None = None
+    opening: RequiredText
+    experience: RequiredText
+    # Present exactly when at least one known gap applies to the posting --
+    # decided in code before the LLM runs (../gaps/gaps.py), since a gap is
+    # raised only when the posting asks for what it's missing. The per-call
+    # schema (cover_letter_schema) requires or removes it accordingly, and
+    # write_cover_letter() rejects a letter that doesn't match.
+    gaps: OptionalText = None
+    closing: RequiredText
+
+
+# JSON schemas for Ollama structured outputs (llm/client.py's response_schema):
+# the same models that validate a response also constrain its generation, so
+# the two can't drift apart.
+RESUME_JSON_SCHEMA = Resume.model_json_schema()
+
+
+# The cover letter schema is built per call: with gaps to raise, "gaps" is a
+# required string; with none, it's removed entirely, so the model has no field
+# to put an unasked-for gap in.
+def cover_letter_schema(gaps_expected: bool) -> dict:
+    schema = copy.deepcopy(CoverLetter.model_json_schema())
+    if gaps_expected:
+        schema["properties"]["gaps"] = {"title": "Gaps", "type": "string"}
+        schema["required"] = ["opening", "experience", "gaps", "closing"]
+    else:
+        del schema["properties"]["gaps"]
+    return schema
 
 
 def _today() -> str:
@@ -150,7 +240,9 @@ async def _render(playwright: Playwright, html_content: str, output_path: str) -
     await browser.close()
 
 
-async def _render_to_pdf(html_content: str, output_path: str) -> WriteResult:
+async def _render_to_pdf(
+    html_content: str, output_path: str, content: "Resume | CoverLetter"
+) -> WriteResult:
     async with async_playwright() as playwright:
         await _render(playwright, html_content, output_path)
 
@@ -162,20 +254,20 @@ async def _render_to_pdf(html_content: str, output_path: str) -> WriteResult:
     if page_count != 1:
         # One page is a hard constraint (../README.md, ../../CLAUDE.md) — an
         # overflow must route to the user for review, never ship or auto-retry.
-        # That routing (email + approve/reject) isn't built yet; for now this
-        # only refuses to hand back a path for a document that doesn't qualify.
+        # That routing (email + approve/reject) isn't built yet. The path is
+        # still returned: the file stays on disk until the user answers.
         logger.warning(
             "write: %s rendered to %d pages, expected exactly 1", output_path, page_count
         )
-        return WriteResult(path=None, error=WriteError.OVERFLOW)
+        return WriteResult(path=output_path, error=WriteError.OVERFLOW, content=content)
 
-    return WriteResult(path=output_path)
+    return WriteResult(path=output_path, content=content)
 
 
 async def write_resume(
     llm_response: str,
     personal: dict,
-    output_path: str = "resume.pdf",
+    output_path: str,
 ) -> WriteResult:
     """llm_response: the resume call's raw JSON string (RESUME_SCHEMA, see prompts/resume.py).
     personal: profile.json's "personal" block (name/email/phone/location/github/linkedin)."""
@@ -201,13 +293,14 @@ async def write_resume(
         base_font_pt=BASE_FONT_PT,
     )
 
-    return await _render_to_pdf(html_content, output_path)
+    return await _render_to_pdf(html_content, output_path, resume)
 
 
-def parse_application_answers(llm_response: str) -> ParseResult:
+def parse_application_answers(llm_response: str, questions: list[dict]) -> ParseResult:
     """llm_response: the application call's raw JSON string ({field_id: answer},
-    see prompts/application.py). No template, no PDF — form_automation/ (not yet
-    built) is the intended consumer of the returned dict."""
+    see prompts/application.py). questions: the same list the prompt was built
+    from ({field_id, question, max_length?}). No template, no PDF —
+    form_automation/ (not yet built) is the intended consumer of the returned dict."""
     try:
         answers = _ApplicationAnswers.validate_python(json.loads(llm_response))
     except json.JSONDecodeError as e:
@@ -217,18 +310,52 @@ def parse_application_answers(llm_response: str) -> ParseResult:
         logger.warning("parse_application_answers: schema validation failed: %s", e)
         return ParseResult(answers=None, error=WriteError.VALIDATION_ERROR)
 
+    # The structured-output schema already forces exactly these keys; this
+    # guards against a model/Ollama version that doesn't honor it.
+    expected = {q["field_id"] for q in questions}
+    if set(answers) != expected:
+        logger.warning(
+            "parse_application_answers: field_id mismatch, missing=%s unexpected=%s",
+            sorted(expected - set(answers)),
+            sorted(set(answers) - expected),
+        )
+        return ParseResult(answers=None, error=WriteError.VALIDATION_ERROR)
+
+    flagged: dict[str, WriteError] = {}
+    for question in questions:
+        field_id = question["field_id"]
+        answer = answers[field_id]
+        max_length = question.get("max_length")
+        if _is_placeholder(answer):
+            flagged[field_id] = WriteError.UNANSWERED
+        elif max_length and len(answer) > max_length:
+            flagged[field_id] = WriteError.ANSWER_TOO_LONG
+
+    if flagged:
+        # One error per result: ANSWER_TOO_LONG wins, since the platform would
+        # reject or truncate it outright; per-field detail stays in flagged.
+        if WriteError.ANSWER_TOO_LONG in flagged.values():
+            error = WriteError.ANSWER_TOO_LONG
+        else:
+            error = WriteError.UNANSWERED
+        logger.warning("parse_application_answers: %s: %s", error.value, flagged)
+        return ParseResult(answers=answers, error=error, flagged=flagged)
+
     return ParseResult(answers=answers)
 
 
 async def write_cover_letter(
     llm_response: str,
     personal: dict,
+    output_path: str,
+    gaps_expected: bool,
     company: str | None = None,
-    output_path: str = "cover_letter.pdf",
 ) -> WriteResult:
     """llm_response: the cover letter call's raw JSON string (COVER_LETTER_SCHEMA, see
     prompts/cover_letter.py).
-    personal: profile.json's "personal" block (name/email/phone/location/github/linkedin)."""
+    personal: profile.json's "personal" block (name/email/phone/location/github/linkedin).
+    gaps_expected: whether any known gap applies to this posting (gaps.decide_gaps) --
+    the letter must have a gaps paragraph exactly when one does."""
     try:
         letter = CoverLetter.model_validate(json.loads(llm_response))
     except json.JSONDecodeError as e:
@@ -236,6 +363,16 @@ async def write_cover_letter(
         return WriteResult(path=None, error=WriteError.INVALID_JSON)
     except ValidationError as e:
         logger.warning("write_cover_letter: schema validation failed: %s", e)
+        return WriteResult(path=None, error=WriteError.VALIDATION_ERROR)
+
+    # The per-call schema already enforces this; checked again so a model that
+    # ignores the schema can't drop a gap that applies, or raise one nobody asked about.
+    if gaps_expected != (letter.gaps is not None):
+        logger.warning(
+            "write_cover_letter: gaps paragraph %s, expected %s",
+            "present" if letter.gaps is not None else "missing",
+            "one" if gaps_expected else "none",
+        )
         return WriteResult(path=None, error=WriteError.VALIDATION_ERROR)
 
     template = _env.get_template("cover_letter.html")
@@ -248,4 +385,4 @@ async def write_cover_letter(
         base_font_pt=BASE_FONT_PT,
     )
 
-    return await _render_to_pdf(html_content, output_path)
+    return await _render_to_pdf(html_content, output_path, letter)

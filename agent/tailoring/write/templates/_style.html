@@ -9,7 +9,13 @@
   html, body {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    /* One pinned font, installed identically everywhere this renders
+       (fonts-liberation on Debian/Ubuntu, including the container image):
+       the one-page check is a page count, so a different fallback font on
+       another machine could flip the same content between 1 and 2 pages.
+       Arial is metric-compatible with Liberation Sans, so falling back to
+       it wouldn't change line breaks. */
+    font-family: "Liberation Sans", Arial, sans-serif;
     font-size: {{ base_font_pt }}pt;
     line-height: 1.35;
     color: var(--text);
