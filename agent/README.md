@@ -52,6 +52,8 @@ sudo apt install fonts-liberation         # the templates pin Liberation Sans (s
 ollama pull qwen2.5:14b                   # tailoring/llm's default model (~9 GB)
 ```
 
+**Ollama server setting:** serve one request at a time — `OLLAMA_NUM_PARALLEL=1` in the Ollama service's environment (e.g. `sudo systemctl edit ollama` → `[Service]` / `Environment="OLLAMA_NUM_PARALLEL=1"`, then restart). `tailoring/llm`'s token cap and timeout reasoning assume a single slot, and each extra slot would need its own 16k-token context in RAM. Observed as the effective behavior on this machine already; this pins it.
+
 The same steps belong in the container image once one exists. `fonts-liberation` matters beyond looks: the one-page check counts the rendered PDF's pages, so a machine falling back to a different font could flip identical content between one and two pages.
 
 Lint/format with `uvx ruff check .` and `uvx ruff format .` (config in `pyproject.toml`; not a project dependency).

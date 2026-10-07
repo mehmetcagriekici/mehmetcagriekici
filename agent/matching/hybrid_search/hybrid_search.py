@@ -1,4 +1,3 @@
-from matching.constants.constants import SEARCH_LIMIT
 from matching.custom_types.custom_types import Document
 from matching.helpers.helpers import calc_rrf_score
 from matching.inverted_index.inverted_index import InvertedIndex
@@ -21,15 +20,18 @@ class HybridSearch:
         self.inverted_index.build(documents)
 
     # bm25 search from inverted index
-    def bm25_search(self, query: str, limit: int = SEARCH_LIMIT):
+    def bm25_search(self, query: str, limit: int | None = None):
         return self.inverted_index.bm25_search(query, limit)
 
     # semantic search from semantic index with chunking
-    def semantic_search(self, query: str, limit: int = SEARCH_LIMIT):
+    def semantic_search(self, query: str, limit: int | None = None):
         return self.semantic_index.search_chunks(query, limit)
 
-    # rrf search
-    def rrf_search(self, query: str, limit: int = SEARCH_LIMIT):
+    # rrf search. limit=None (the default) ranks every document in both lists:
+    # with a fixed cap, a corpus growing past it would silently drop documents
+    # from the lists and shift every rrf_score -- and with it, what the
+    # matching threshold means
+    def rrf_search(self, query: str, limit: int | None = None):
         # bm25_search already returns results sorted by score, descending
         bm25_results = self.bm25_search(query, limit)
         bm25_ranks = {doc_id: i + 1 for i, doc_id in enumerate(bm25_results)}
@@ -81,4 +83,6 @@ class HybridSearch:
             )
 
         # sort the rrf scores
-        return sorted(rrf_scores, key=lambda score: score["rrf_score"], reverse=True)
+        # ties broken by doc id: doc_ids is a set, whose order changes between
+        # processes, so equal rrf_scores would otherwise swap ranks run to run
+        return sorted(rrf_scores, key=lambda score: (-score["rrf_score"], score["doc_id"]))

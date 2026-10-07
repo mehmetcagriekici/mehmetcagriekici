@@ -5,7 +5,6 @@ from matching.constants.constants import (
     CHUNK_OVERLAP_TOKENS,
     CHUNK_TOKENS,
     EMBEDDING_MODEL,
-    SEARCH_LIMIT,
 )
 from matching.custom_types.custom_types import Document
 from matching.helpers.helpers import token_window_chunks
@@ -75,7 +74,7 @@ class SemanticIndex:
     # nice-to-haves come last). A document's score is its best-matching
     # (query chunk, document chunk) pair: the one place where some part of the
     # posting and some part of the fact line up most closely.
-    def search_chunks(self, query: str, limit: int = SEARCH_LIMIT):
+    def search_chunks(self, query: str, limit: int | None = None):
         # make sure chunk embeddings exists
         if self.chunk_embeddings is None:
             raise ValueError("chunk embeddings is none")
@@ -111,7 +110,8 @@ class SemanticIndex:
                 document_best_chunk[document_id] = i
 
         # get the top documents using the limit
-        top_documents = sorted(document_scores.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+        # ties broken by document id, so equal scores rank the same every run
+        top_documents = sorted(document_scores.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
         # from the top documents create the result that will be sent
         results = []
         for document_id, score in top_documents:

@@ -90,11 +90,6 @@ def _gpa(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
 
 
 _TURKEY = re.compile(r"\b(?:turkey|türkiye|turkiye|ankara|istanbul|i̇stanbul|izmir)\b", re.I)
-_AUTHORIZATION = re.compile(
-    r"\bwork authori[sz]ation\b|\bauthori[sz]ed to work\b|\bright to work\b|"
-    r"\bwork permits?\b|\bvisas?\b|\bsponsor(?:ship)?\b",
-    re.I,
-)
 _REMOTE = re.compile(r"\bremote\b", re.I)
 _NOT_FULLY_REMOTE = re.compile(
     r"\bno remote\b|\bnot remote\b|\bnon-remote\b|\bon-?site\b|\bhybrid\b|"
@@ -105,34 +100,71 @@ _NOT_FULLY_REMOTE = re.compile(
 _TIMEZONE_ONLY = re.compile(
     r"\btime ?zones?\b|\butc\b|\bgmt\b|\bcet\b|\bworldwide\b|\banywhere\b|\bglobal\b", re.I
 )
+# work authorization or residence tied to a place -- "authorized to work in the
+# US", "eligible to work in the EU", "must reside in Canada". On a fully remote
+# role this is what matters; a bare "we cannot sponsor visas" doesn't, since
+# working remotely from Turkey needs no visa. The place must start with a
+# capital letter (keywords are matched case-insensitively). "based in Berlin"
+# describing the company's office also matches -- raising there is the safe
+# direction.
+_PLACE_BOUND_AUTHORIZATION = re.compile(
+    r"(?i:\b(?:authori[sz]ed|eligib(?:le|ility)|right|permitted|reside|residing|resident"
+    r"|located|based|live|living)\b)[^.\n]{0,40}?(?i:\bin\s+(?:the\s+)?)"
+    r"(?P<place>[A-Z][\w.-]*(?:\s+[A-Z][\w.-]*)*)"
+)
+_WORKPLACE_MODES = {
+    "remote": "remote",
+    "hybrid": "hybrid",
+    "onsite": "onsite",
+    "on-site": "onsite",
+    "on site": "onsite",
+    "in-office": "onsite",
+    "office": "onsite",
+}
 
 
-def _work_location(job_posting: dict) -> str:
-    return " ".join(
-        str(job_posting.get(key) or "") for key in ("location", "workplace_type", "remote")
-    )
+# the structured work mode, if sourcing provided one (workplace_type from
+# Lever/Ashby, or a boolean "remote" flag) -- None means only location text
+def _workplace_mode(job_posting: dict) -> str | None:
+    mode = _WORKPLACE_MODES.get(str(job_posting.get("workplace_type") or "").strip().lower())
+    if mode is None and job_posting.get("remote") is True:
+        return "remote"
+    return mode
 
 
 def _visa_sponsorship_needed(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
-    location = _work_location(job_posting)
+    # location text and the structured work mode are read separately -- joined
+    # into one string, a second "remote" (or a "True" flag) after "Remote" was
+    # mistaken for a region qualifier
+    location = str(job_posting.get("location") or "").strip()
+    mode = _workplace_mode(job_posting)
+
     if _TURKEY.search(location):
-        return False, f"role is located in Turkey: {location.strip()!r}", []
+        return False, f"role is located in Turkey: {location!r}", []
 
-    authorization = _first_match(_AUTHORIZATION, text)
-    if authorization:
-        return True, f"posting mentions {authorization!r}", []
+    if mode in ("hybrid", "onsite"):
+        return True, f"workplace type is {mode}: {location!r}", []
+    if _NOT_FULLY_REMOTE.search(location):
+        return True, f"not a fully remote role: {location!r}", []
+    remote_in_location = _REMOTE.search(location)
+    if mode != "remote" and not remote_in_location:
+        # no remote signal at all (or no usable location) -- ambiguity
+        # resolves toward raising the gap
+        return True, f"not a fully remote role: {location!r}", []
 
-    if _REMOTE.search(location) and not _NOT_FULLY_REMOTE.search(location):
-        # "Remote (US/Canada)" still requires living/being authorized there;
-        # "Remote (EU timezones)" only constrains hours
-        qualifier = location[_REMOTE.search(location).end() :].strip(" -–—,")
-        if not qualifier or _TIMEZONE_ONLY.search(qualifier):
-            return False, f"fully remote role: {location.strip()!r}", []
-        return True, f"remote, but restricted to a region: {location.strip()!r}", []
+    # Remote. "Remote (US/Canada)" -- or a remote work mode with location
+    # "United States" -- still requires living/being authorized there;
+    # "Remote (EU timezones)" only constrains hours.
+    qualifier = location[remote_in_location.end() :] if remote_in_location else location
+    qualifier = qualifier.strip(" -–—,()")
+    if qualifier and not _TIMEZONE_ONLY.search(qualifier):
+        return True, f"remote, but restricted to a region: {location!r}", []
 
-    # on-site, hybrid, field-based, or no usable location at all -- ambiguity
-    # resolves toward raising the gap
-    return True, f"not a fully remote role: {location.strip()!r}", []
+    for match in _PLACE_BOUND_AUTHORIZATION.finditer(text):
+        if not _TURKEY.search(match.group("place")):
+            return True, f"remote, but posting requires {match.group(0).strip()!r}", []
+
+    return False, f"fully remote role: {location or mode!r}", []
 
 
 # one rule per known-gaps.json id. A gap with no rule here is an error, not a

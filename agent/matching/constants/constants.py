@@ -1,17 +1,26 @@
 BM25_K1 = 1.5
 BM25_B = 0.75
-SEARCH_LIMIT = 50
 
-# a posting passes when at least MATCH_MIN_FACTS distinct source_of_truth facts
-# score rrf_score >= MATCH_RRF_THRESHOLD against it. Recalibrated 2026-09-30
-# (was 0.028) after token-window chunking and the BM25 punctuation fix changed
-# the rankings -- and 0.028 had already stopped separating anything on the
-# current corpus (the sales-manager mismatch fixture passed with 8 facts).
-# 0.029 is the only value that separates the fixtures: relevant postings keep
-# 5/5/9 facts, the mismatch 3. Thin margin, 4 fixtures -- recalibrate against
-# real ATS data (scripts/calibrate_threshold.py; see matching/README.md).
-MATCH_RRF_THRESHOLD = 0.029
+# a posting passes when at least MATCH_MIN_FACTS distinct fit facts (gap and
+# screening-answer facts excluded, see NON_FIT_FACT_PREFIXES) score
+# rrf_score >= MATCH_RRF_THRESHOLD against it. Recalibrated 2026-10-07 after
+# excluding non-fit facts from the count, ranking every fact (no 50-item cap),
+# deterministic tie-breaking, and indexing profile.summary: the sales-manager
+# mismatch now has 0 fit facts at every threshold from 0.027 to 0.032, and
+# 0.028 gives the relevant fixtures the most room (7/6/7 facts vs. the minimum
+# of 4; 0.029 left the Go posting at exactly 4). Still four synthetic
+# postings -- recalibrate against real ATS data (scripts/calibrate_threshold.py).
+MATCH_RRF_THRESHOLD = 0.028
 MATCH_MIN_FACTS = 4
+
+# Facts that describe the candidate's gaps or screening answers rather than
+# evidence of fit. They match nearly every posting (anything mentioning
+# experience, salary, location...), so counting them inflated every posting's
+# fact count -- including mismatches'. They still appear in the ranked results
+# (and reach the generator, where the application call needs them for honest
+# answers); they just don't count toward the pass/fail verdict or the ranking.
+NON_FIT_FACT_PREFIXES = ("known_gap:", "job_preference:")
+NON_FIT_FACT_IDS = ("professional_experience",)
 
 # semantic chunking, in embedding-model tokens. all-MiniLM-L6-v2 silently
 # truncates anything past 256 tokens and was trained on 128-token sequences,

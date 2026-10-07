@@ -1,7 +1,7 @@
 import math
 from collections import Counter, defaultdict
 
-from matching.constants.constants import BM25_B, BM25_K1, SEARCH_LIMIT
+from matching.constants.constants import BM25_B, BM25_K1
 from matching.custom_types.custom_types import Document
 from matching.helpers.helpers import tokenize
 
@@ -88,7 +88,7 @@ class InvertedIndex:
 
     # implement the bm25 search algorithm. results are returned sorted by
     # score, descending, so callers never need to re-sort them.
-    def bm25_search(self, query: str, limit: int = SEARCH_LIMIT) -> dict[str, float]:
+    def bm25_search(self, query: str, limit: int | None = None) -> dict[str, float]:
         # tokenize the query
         tokens = tokenize(query)
         scores = defaultdict(float)
@@ -98,5 +98,8 @@ class InvertedIndex:
                 for doc_id in self.index[token]:
                     scores[doc_id] += self.bm25(doc_id, token)
 
-        top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+        # ties broken by doc id: self.index holds sets, whose iteration order
+        # for strings changes between processes (hash randomization), so
+        # without a tiebreaker equal-score documents swapped ranks run to run
+        top = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
         return dict(top)

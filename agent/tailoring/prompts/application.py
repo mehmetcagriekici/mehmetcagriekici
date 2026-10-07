@@ -1,10 +1,13 @@
 import json
 
-from ._shared import format_facts, format_posting
+from ._shared import escape_untrusted, format_facts, format_posting
 
 
 def _format_question(question: dict) -> str:
-    line = f"- {question['field_id']}: {question['question']}"
+    # field ids and question text come from the ATS form -- untrusted, like the posting
+    line = (
+        f"- {escape_untrusted(str(question['field_id']))}: {escape_untrusted(question['question'])}"
+    )
     if question.get("max_length"):
         line += f" (max {question['max_length']} characters)"
     return line

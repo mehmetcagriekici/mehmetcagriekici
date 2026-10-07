@@ -17,7 +17,8 @@ DEFAULT_MODEL = "qwen2.5:14b"
 # Hard cap on generated tokens per call. This, not the timeout below, is what
 # actually stops a runaway generation: a client-side timeout only abandons the
 # request on the Python side, while the Ollama server keeps generating and keeps
-# holding its only slot (-np 1, see ../../CLAUDE.md), stalling every other call
+# holding its only slot (Ollama serving one request at a time: observed as -np 1
+# on this machine, pinned via OLLAMA_NUM_PARALLEL=1 per ../../README.md), stalling every other call
 # queued behind it. A generous guess for the largest output (the resume JSON),
 # not a measured bound -- tune once real output lengths have been logged.
 NUM_PREDICT = 2048

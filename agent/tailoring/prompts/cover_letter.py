@@ -1,6 +1,6 @@
 from tailoring.gaps.gaps import GapDecision
 
-from ._shared import format_facts, format_posting
+from ._shared import escape_untrusted, format_facts, format_posting
 
 COVER_LETTER_SCHEMA = """{
   "opening": "1 short paragraph naming the role and company, and why you are writing -- no gaps",
@@ -20,7 +20,8 @@ COVER_LETTER_SCHEMA_NO_GAPS = """{
 def _format_gap(decision: GapDecision) -> str:
     lines = [f"- {decision.gap}", f"  fact: {decision.fact}", f"  phrasing: {decision.phrasing}"]
     if decision.requirements:
-        quoted = "; ".join(f'"{r}"' for r in decision.requirements)
+        # quoted from the posting -- untrusted text inside our own tag
+        quoted = "; ".join(f'"{escape_untrusted(r)}"' for r in decision.requirements)
         lines.append(f"  the posting's own requirement(s) this answers: {quoted}")
     return "\n".join(lines)
 

@@ -26,6 +26,14 @@ def _load_json(path: str):
         return json.load(f)
 
 
+# the candidate's own hand-written summary -- a fit statement in their words
+def _summary_document(profile: dict) -> list[Document]:
+    summary = profile.get("summary")
+    if not summary:
+        return []
+    return [Document(id="summary", content=_dumps({"summary": summary}))]
+
+
 def _skill_documents(profile: dict) -> list[Document]:
     documents = []
     for category, skills in profile.get("skills", {}).items():
@@ -121,6 +129,7 @@ def build_source_of_truth_documents(source_of_truth_dir: str) -> list[Document]:
     preferences = _load_json(os.path.join(source_of_truth_dir, "preferences.json"))
 
     documents: list[Document] = []
+    documents += _summary_document(profile)
     documents += _skill_documents(profile)
     documents += _project_documents(profile, projects_detail)
     documents += _certification_documents(profile)
