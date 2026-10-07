@@ -1,5 +1,7 @@
 import json
 
+from matching.document_builder.document_builder import posting_content
+
 
 def format_facts(facts: list[dict]) -> str:
     return "\n".join(f"- ({fact['doc_id']}) {fact['content']}" for fact in facts)
@@ -10,9 +12,14 @@ def format_facts(facts: list[dict]) -> str:
 # but posting text can no longer contain a literal "</job_posting>" and close
 # the untrusted-data tag early, making whatever follows look like prompt
 # structure (json.dumps alone leaves < and > as-is).
+# Only the posting's content fields (posting_content) -- not ids, urls, or the
+# stored raw ATS response, which would roughly double the posting's share of
+# the context window.
 def format_posting(job_posting: dict) -> str:
     return (
-        json.dumps(job_posting, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e")
+        json.dumps(posting_content(job_posting), ensure_ascii=False)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
     )
 
 

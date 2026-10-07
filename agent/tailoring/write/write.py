@@ -46,6 +46,23 @@ class WriteError(Enum):
     LLM_FAILURE = "llm_failure"
     UNANSWERED = "unanswered"
     ANSWER_TOO_LONG = "answer_too_long"
+    # the prompt might not fit Ollama's context window (llm.client.PromptTooLongError),
+    # caught before anything was sent -- a caller constructs this, like LLM_FAILURE
+    PROMPT_TOO_LONG = "prompt_too_long"
+
+
+# How a failure affects the posting (decided 2026-10-07). Content failures are
+# about *this posting* -- the model produced bad output for it, or its prompt
+# can't fit -- and would likely repeat, so they warrant a permanent exclusion
+# in tracking/. Infrastructure failures are about the machine (Ollama down or
+# timing out, Chromium crashing): the posting itself is fine and comes back
+# next run, and a runner should stop the run rather than keep failing through
+# its best-ranked postings. OVERFLOW/UNANSWERED/ANSWER_TOO_LONG are neither --
+# real content that routes to the user's review.
+CONTENT_FAILURES = frozenset(
+    {WriteError.INVALID_JSON, WriteError.VALIDATION_ERROR, WriteError.PROMPT_TOO_LONG}
+)
+INFRASTRUCTURE_FAILURES = frozenset({WriteError.LLM_FAILURE, WriteError.RENDER_FAILURE})
 
 
 # content is the parsed Resume/CoverLetter whenever the LLM response parsed and

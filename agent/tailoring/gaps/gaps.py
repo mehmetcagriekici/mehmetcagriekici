@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass, field
 
+from matching.document_builder.document_builder import posting_content
+
 # Which known gaps a cover letter raises is decided here, in plain code,
 # before the LLM runs -- a gap is raised only if the posting asks for the
 # thing it's missing (decided 2026-09-30, see ../../CLAUDE.md). The 7B model
@@ -26,23 +28,41 @@ class GapDecision:
     requirements: list[str] = field(default_factory=list)
 
 
-def _posting_text(value: object) -> str:
-    # every string in the posting (title, description, requirements, ...),
-    # flattened -- numbers like salary figures are irrelevant to these rules
+def _flatten(value: object) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
-        return "\n".join(_posting_text(v) for v in value.values())
+        return "\n".join(_flatten(v) for v in value.values())
     if isinstance(value, list):
-        return "\n".join(_posting_text(v) for v in value)
+        return "\n".join(_flatten(v) for v in value)
     return ""
 
 
-def _requirement_lines(job_posting: dict) -> list[str]:
+# Curly quotes are normalized once here, so every rule's regex can assume a
+# straight apostrophe -- real ATS HTML is full of them ("Master’s" slipped past
+# the degree rule).
+def _normalize(text: str) -> str:
+    return text.replace("\u2019", "'").replace("\u2018", "'")
+
+
+# every string in the posting's content fields (posting_content -- never ids,
+# urls, or the stored raw ATS response), flattened
+def _posting_text(job_posting: dict) -> str:
+    return _normalize(_flatten(posting_content(job_posting)))
+
+
+# The lines the years rule checks: every line of the description -- sourcing
+# puts each HTML bullet on its own line, and a prose line is further split into
+# sentences -- plus the requirements/nice_to_have lists the synthetic fixtures
+# carry. Scanning only requirements went silent on normalized postings, which
+# have no such list: a description's "3+ years ..." raised nothing.
+def _candidate_lines(job_posting: dict) -> list[str]:
     lines = []
     for key in ("requirements", "nice_to_have"):
         lines += [line for line in job_posting.get(key) or [] if isinstance(line, str)]
-    return lines
+    for line in str(job_posting.get("description") or "").splitlines():
+        lines += re.split(r"(?<=[.!?])\s+", line)
+    return [_normalize(line.strip()) for line in lines if line.strip()]
 
 
 def _first_match(pattern: re.Pattern, text: str) -> str | None:
@@ -58,7 +78,7 @@ _PROFESSIONAL_EXPERIENCE = re.compile(
 
 
 def _no_professional_experience(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
-    years_lines = [line for line in _requirement_lines(job_posting) if _YEARS.search(line)]
+    years_lines = [line for line in _candidate_lines(job_posting) if _YEARS.search(line)]
     if years_lines:
         return True, f"posting asks for years of experience: {years_lines[0]!r}", years_lines
     phrase = _first_match(_PROFESSIONAL_EXPERIENCE, text)
@@ -68,7 +88,7 @@ def _no_professional_experience(job_posting: dict, text: str) -> tuple[bool, str
 
 
 _DEGREE = re.compile(
-    r"\b(?:degree|bachelor'?s?|master'?s|b\.?sc|m\.?sc|bs/ms|ba/bs|diploma|phd)\b", re.I
+    r"\b(?:degree|bachelor'?s?|master'?s|b\.?sc|m\.?sc|bs/ms|ba/bs|diploma|ph\.?\s?d)\b", re.I
 )
 
 
@@ -96,9 +116,17 @@ _NOT_FULLY_REMOTE = re.compile(
     r"\bin[- ]office\b|\boffice-based\b|\bfield-based\b",
     re.I,
 )
-# a remote qualifier that only constrains working hours, not where you live
-_TIMEZONE_ONLY = re.compile(
-    r"\btime ?zones?\b|\butc\b|\bgmt\b|\bcet\b|\bworldwide\b|\banywhere\b|\bglobal\b", re.I
+# Words in a remote qualifier that only constrain working hours or say "no
+# restriction" -- including a region named as a timezone ("EU timezones").
+# They're removed from the qualifier, and the role counts as region-restricted
+# if any word is left: "Anywhere in the US" leaves "in the US". (Checking only
+# whether such a word was *present* let "Anywhere in the US" pass as fully
+# remote -- the unsafe direction.)
+_HOURS_OR_UNRESTRICTED = re.compile(
+    r"[\w/+-]*\s*\btime ?zones?\b|\b(?:utc|gmt)(?:\s*[+-]\s*\d+)?\b"
+    r"|\b(?:cet|cest|est|edt|pst|pdt)\b|\bworldwide\b|\banywhere\b|\bglobal(?:ly)?\b"
+    r"|\bteam\b|\bfriendly\b|\bhours?\b|\boverlap\b",
+    re.I,
 )
 # work authorization or residence tied to a place -- "authorized to work in the
 # US", "eligible to work in the EU", "must reside in Canada". On a fully remote
@@ -157,7 +185,7 @@ def _visa_sponsorship_needed(job_posting: dict, text: str) -> tuple[bool, str, l
     # "Remote (EU timezones)" only constrains hours.
     qualifier = location[remote_in_location.end() :] if remote_in_location else location
     qualifier = qualifier.strip(" -–—,()")
-    if qualifier and not _TIMEZONE_ONLY.search(qualifier):
+    if re.search(r"[^\W\d_]{2,}", _HOURS_OR_UNRESTRICTED.sub(" ", qualifier)):
         return True, f"remote, but restricted to a region: {location!r}", []
 
     for match in _PLACE_BOUND_AUTHORIZATION.finditer(text):

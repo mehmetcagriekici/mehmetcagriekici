@@ -7,7 +7,7 @@ import sys
 # run directly without an editable install
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from matching.matcher.matcher import evaluate_posting
+from matching.matcher.matcher import _is_fit_fact, evaluate_posting
 
 SOURCE_OF_TRUTH_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "source_of_truth")
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures", "postings")
@@ -46,7 +46,10 @@ def main():
             f"{result['matching_fact_count']}  [{verdict}]"
         )
         print("top matching facts:")
-        for r in result["results"][: result["matching_fact_count"] or 5]:
+        # fit facts only, matching what matching_fact_count counts -- the raw
+        # results interleave gap/screening facts, which don't count
+        fit = [r for r in result["results"] if _is_fit_fact(r["doc_id"])]
+        for r in fit[: result["matching_fact_count"] or 5]:
             print(f"  rrf_score={r['rrf_score']:.4f}  doc_id={r['doc_id']}")
 
     listed = f": {', '.join(wrong)}" if wrong else ""

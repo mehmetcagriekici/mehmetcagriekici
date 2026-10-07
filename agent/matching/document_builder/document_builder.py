@@ -142,7 +142,36 @@ def build_source_of_truth_documents(source_of_truth_dir: str) -> list[Document]:
     return documents
 
 
-# job postings arrive from sourcing as JSON already, so the query string is
-# just that JSON serialized — no per-ATS flattening logic needed
+# The posting fields that carry content. Everything that reads a posting's text
+# -- the search query here, tailoring's prompts and gap rules -- goes through
+# posting_content(), so bookkeeping fields (id, ats, board, url, posted_at,
+# salary) and the stored raw ATS response never leak into a query, a prompt, or
+# a keyword rule (dumping the whole dict would have sent `raw` -- a second copy
+# of the description plus ATS metadata -- everywhere, and calibrated the
+# threshold against a different query than production sends). requirements/
+# nice_to_have exist only on the synthetic fixtures; normalized postings carry
+# everything in description.
+POSTING_CONTENT_FIELDS = (
+    "title",
+    "company",
+    "location",
+    "workplace_type",
+    "employment_type",
+    "description",
+    "requirements",
+    "nice_to_have",
+)
+
+
+def posting_content(job_posting: dict) -> dict:
+    return {
+        field: job_posting[field]
+        for field in POSTING_CONTENT_FIELDS
+        if job_posting.get(field) not in (None, "", [])
+    }
+
+
+# the query string is the posting's content fields serialized as JSON — no
+# per-ATS flattening logic needed, since sourcing normalizes every ATS
 def job_posting_to_query(job_posting: dict) -> str:
-    return _dumps(job_posting)
+    return _dumps(posting_content(job_posting))

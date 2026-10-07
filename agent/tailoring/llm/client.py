@@ -1,6 +1,7 @@
 import os
 
-from ollama import AsyncClient, ChatResponse
+import httpx
+from ollama import AsyncClient, ChatResponse, ResponseError
 
 # Ollama host - defaults to localhost:11434 for local development
 # When running in Docker, set OLLAMA_HOST env var to http://ollama:11434
@@ -39,15 +40,29 @@ NUM_CTX = 16384
 # too.
 TIMEOUT_SECONDS = 3600
 
-_client = AsyncClient(host=OLLAMA_HOST, timeout=TIMEOUT_SECONDS)
+# Ollama never errors on an oversized prompt -- it silently drops the start
+# (see NUM_CTX). Its reported prompt_eval_count can't reliably detect that
+# afterwards, since a prefix reused from Ollama's cache isn't counted, so the
+# check happens before sending, on a conservative estimate: a token covers at
+# least ~3 characters. Measured on real prompts here: ~5.6 characters/token
+# (JSON-heavy English), so this only trips well before a real truncation.
+MIN_CHARS_PER_TOKEN = 3.0
 
 
 class OllamaError(Exception):
-    """Raised when an Ollama chat call fails for any reason -- a bad response
-    (e.g. the model isn't pulled), an unreachable host, a timeout (the likely
-    case in practice: this project runs CPU-only inference, see ../../CLAUDE.md's
-    tech stack section), output cut off at NUM_PREDICT, or anything else the
-    client library raises."""
+    """Raised when an Ollama chat call fails for an infrastructure reason -- an
+    error response (e.g. the model isn't pulled), an unreachable host, a
+    timeout (the likely case in practice: CPU-only inference, see
+    ../../CLAUDE.md's tech stack section), or output cut off at NUM_PREDICT.
+    Anything else -- a bug in this code, a misuse of the client -- propagates
+    as itself instead of being disguised as an Ollama problem."""
+
+
+class PromptTooLongError(Exception):
+    """The prompt (system + user) may not fit in NUM_CTX minus the output cap,
+    so Ollama would silently drop part of it. Raised before anything is sent.
+    Not an OllamaError: it's a property of this posting's prompt, not of the
+    server, and would fail the same way every run."""
 
 
 # async function to get llm response from ollama.
@@ -62,26 +77,42 @@ async def llm_ollama(
     model: str = DEFAULT_MODEL,
     temperature: float = 0.2,
 ) -> str:
-    try:
-        response: ChatResponse = await _client.chat(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            format=response_schema,
-            options={
-                "temperature": temperature,
-                "num_predict": NUM_PREDICT,
-                "num_ctx": NUM_CTX,
-            },
+    prompt_chars = len(system_prompt) + len(user_prompt)
+    max_prompt_tokens = NUM_CTX - NUM_PREDICT
+    if prompt_chars / MIN_CHARS_PER_TOKEN > max_prompt_tokens:
+        raise PromptTooLongError(
+            f"prompt is {prompt_chars} characters, which may exceed the "
+            f"{max_prompt_tokens}-token prompt budget "
+            f"(num_ctx={NUM_CTX} - num_predict={NUM_PREDICT})"
         )
-    except Exception as e:
-        # Not logged here -- raise OllamaError(...) from e preserves the original
-        # exception (type and message) on __cause__, so whoever ends up catching
-        # and logging this (see tailoring/generate.py) gets the full chain in one
-        # log line rather than this call logging it again on top.
-        raise OllamaError(str(e)) from e
+
+    # A client per call, not one module-level client: its pooled httpx
+    # connections belong to the event loop that opened them, so a shared client
+    # failed with "Event loop is closed" on the second asyncio.run() -- and that
+    # bug was reported as an OllamaError. One extra connection setup per
+    # ~15-minute call costs nothing.
+    try:
+        async with AsyncClient(host=OLLAMA_HOST, timeout=TIMEOUT_SECONDS) as client:
+            response: ChatResponse = await client.chat(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                format=response_schema,
+                options={
+                    "temperature": temperature,
+                    "num_predict": NUM_PREDICT,
+                    "num_ctx": NUM_CTX,
+                },
+            )
+    # Infrastructure failures only: an error response from the server
+    # (ResponseError), an unreachable host (the ollama library raises the
+    # builtin ConnectionError), or a transport failure/timeout (httpx). Not
+    # logged here -- "from e" keeps the original on __cause__, so whoever
+    # catches and logs this (see tailoring/generate.py) gets the full chain once.
+    except (ResponseError, ConnectionError, httpx.HTTPError) as e:
+        raise OllamaError(f"{type(e).__name__}: {e}") from e
 
     # Hitting the cap means the JSON was cut off mid-object. Raised here as its
     # own failure rather than left to surface later as a confusing INVALID_JSON.

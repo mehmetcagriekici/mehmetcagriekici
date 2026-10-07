@@ -6,12 +6,14 @@ Decides, in plain code and before any LLM call, which of `source_of_truth/known-
 
 ## Rules (keyword checks over the posting's text)
 
+The text checked is the posting's content fields only (`posting_content()` from `matching/document_builder/` — never ids, urls, or the stored `raw` ATS response), with curly apostrophes normalized to straight ones first, since real ATS HTML uses them ("Master’s" once slipped past the degree rule).
+
 | Gap | Raised when |
 |---|---|
-| `no_professional_experience` | a requirement line asks for years ("3+ years", "5-7 years"), or the posting mentions professional/work/industry/commercial experience |
-| `in_progress_degree` | the posting mentions a degree, bachelor's, master's, BSc/MSc, diploma, or PhD |
+| `no_professional_experience` | a line asks for years ("3+ years", "5-7 years") — every line of the description, prose lines split into sentences, plus the fixtures' `requirements`/`nice_to_have` lists — or the posting mentions professional/work/industry/commercial experience. (It used to read only `requirements`, which normalized postings don't have — it went silent on them.) |
+| `in_progress_degree` | the posting mentions a degree, bachelor's, master's, BSc/MSc, diploma, or PhD/Ph.D. |
 | `gpa` | the posting mentions GPA / grade point average |
-| `visa_sponsorship_needed` | not when the location is in Turkey; always for a hybrid/on-site work mode or location text; for a remote role, only if it's restricted to a region ("Remote (US/Canada)", or a remote work mode with location "United States" — a timezone-only qualifier doesn't count) or the posting ties work authorization/residence to a place ("authorized to work in the United States", "must reside in Canada"). A bare "we cannot sponsor visas" on a fully remote role doesn't raise it — working remotely from Turkey needs no visa. No remote signal at all raises it. Location text and the structured `workplace_type`/`remote` fields are read separately (joined into one string, a second "remote" was once mistaken for a region). |
+| `visa_sponsorship_needed` | not when the location is in Turkey; always for a hybrid/on-site work mode or location text; for a remote role, only if it's restricted to a region ("Remote (US/Canada)", or a remote work mode with location "United States" — a a qualifier that's only hours or "no restriction" — "EU timezones", "worldwide" — doesn't count; any other word left over does, so "Anywhere in the US" is restricted) or the posting ties work authorization/residence to a place ("authorized to work in the United States", "must reside in Canada"). A bare "we cannot sponsor visas" on a fully remote role doesn't raise it — working remotely from Turkey needs no visa. No remote signal at all raises it. Location text and the structured `workplace_type`/`remote` fields are read separately (joined into one string, a second "remote" was once mistaken for a region). |
 
 Ambiguity resolves toward raising a gap, never hiding one — e.g. a posting with no usable location raises the visa gap. Keyword rules are crude (a "360-degree view" would match the degree rule); that errs in the same direction.
 

@@ -7,7 +7,7 @@ from playwright.async_api import Error as PlaywrightError
 from pypdf.errors import PyPdfError
 
 from tailoring.gaps.gaps import GapDecision, decide_gaps
-from tailoring.llm.client import OllamaError, llm_ollama
+from tailoring.llm.client import OllamaError, PromptTooLongError, llm_ollama
 from tailoring.prompts.application import build_application_prompt
 from tailoring.prompts.cover_letter import build_cover_letter_prompt
 from tailoring.prompts.resume import build_resume_prompt
@@ -44,7 +44,9 @@ class GenerateResult:
 # retries (see write/README.md) -- so the application is dead, and spending
 # the single Ollama slot on its remaining calls would only delay every other
 # posting queued behind it. OVERFLOW is deliberately not here: that content is
-# real and goes to the user for approve/reject, so generation continues.
+# real and goes to the user for approve/reject, so generation continues. (For
+# what each failure means for the posting afterwards -- excluded or retried
+# next run -- see write.py's CONTENT_FAILURES / INFRASTRUCTURE_FAILURES.)
 _BROKEN_RESPONSE = (WriteError.INVALID_JSON, WriteError.VALIDATION_ERROR)
 
 
@@ -128,6 +130,10 @@ async def generate(
     resume_prompt = build_resume_prompt(writing_facts, job_posting)
     try:
         resume_response = await llm_ollama(resume_prompt, SYSTEM_PROMPT, RESUME_JSON_SCHEMA)
+    except PromptTooLongError:
+        logger.exception("generate: resume prompt too long")
+        result.resume = WriteResult(path=None, error=WriteError.PROMPT_TOO_LONG)
+        return result
     except OllamaError:
         logger.exception("generate: resume LLM call failed")
         result.resume = WriteResult(path=None, error=WriteError.LLM_FAILURE)
@@ -147,6 +153,10 @@ async def generate(
         cover_letter_response = await llm_ollama(
             cover_letter_prompt, SYSTEM_PROMPT, cover_letter_schema(bool(gaps_to_raise))
         )
+    except PromptTooLongError:
+        logger.exception("generate: cover letter prompt too long")
+        result.cover_letter = WriteResult(path=None, error=WriteError.PROMPT_TOO_LONG)
+        return result
     except OllamaError:
         logger.exception("generate: cover letter LLM call failed")
         result.cover_letter = WriteResult(path=None, error=WriteError.LLM_FAILURE)
@@ -166,12 +176,20 @@ async def generate(
     if result.cover_letter.error in _BROKEN_RESPONSE:
         return result
 
-    # generate form answers
+    # generate form answers -- skipped when the form has no free-text
+    # questions, rather than spending a full LLM call on an empty object
+    if not questions:
+        result.application = ParseResult(answers={})
+        return result
     application_prompt = build_application_prompt(facts, job_posting, questions)
     try:
         application_response = await llm_ollama(
             application_prompt, SYSTEM_PROMPT, application_answers_schema(questions)
         )
+    except PromptTooLongError:
+        logger.exception("generate: application prompt too long")
+        result.application = ParseResult(answers=None, error=WriteError.PROMPT_TOO_LONG)
+        return result
     except OllamaError:
         logger.exception("generate: application LLM call failed")
         result.application = ParseResult(answers=None, error=WriteError.LLM_FAILURE)
