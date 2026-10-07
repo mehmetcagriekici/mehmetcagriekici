@@ -7,14 +7,14 @@ import sys
 # run directly without an editable install
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from matching.matcher.matcher import _is_fit_fact, evaluate_posting
+from matching.matcher.matcher import evaluate_posting, is_fit_fact
 
 SOURCE_OF_TRUTH_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "source_of_truth")
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures", "postings")
 
 # expected verdict per fixture -- a relevant posting must pass, a mismatch must
-# fail. Kept here rather than inside the fixture JSON, since the whole posting
-# JSON becomes the search query and an extra key would leak into it.
+# fail. Kept here rather than in the fixture JSON so the fixtures stay plain
+# postings.
 EXPECTED = {
     "data_engineer_mlops.json": True,
     "fullstack_developer.json": True,
@@ -26,7 +26,7 @@ EXPECTED = {
 def main():
     wrong = []
     for path in sorted(glob.glob(os.path.join(FIXTURES_DIR, "*.json"))):
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             posting = json.load(f)
         result = evaluate_posting(posting, SOURCE_OF_TRUTH_DIR)
 
@@ -48,7 +48,7 @@ def main():
         print("top matching facts:")
         # fit facts only, matching what matching_fact_count counts -- the raw
         # results interleave gap/screening facts, which don't count
-        fit = [r for r in result["results"] if _is_fit_fact(r["doc_id"])]
+        fit = [r for r in result["results"] if is_fit_fact(r["doc_id"])]
         for r in fit[: result["matching_fact_count"] or 5]:
             print(f"  rrf_score={r['rrf_score']:.4f}  doc_id={r['doc_id']}")
 

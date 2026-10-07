@@ -1,4 +1,6 @@
+import asyncio
 import os
+import weakref
 
 import httpx
 from ollama import AsyncClient, ChatResponse, ResponseError
@@ -52,10 +54,17 @@ MIN_CHARS_PER_TOKEN = 3.0
 class OllamaError(Exception):
     """Raised when an Ollama chat call fails for an infrastructure reason -- an
     error response (e.g. the model isn't pulled), an unreachable host, a
-    timeout (the likely case in practice: CPU-only inference, see
-    ../../CLAUDE.md's tech stack section), or output cut off at NUM_PREDICT.
+    timeout (the likely case in practice: CPU-only inference).
     Anything else -- a bug in this code, a misuse of the client -- propagates
-    as itself instead of being disguised as an Ollama problem."""
+    as itself instead of being disguised as an Ollama problem. (Output cut off
+    at NUM_PREDICT is OutputTooLongError, not this.)"""
+
+
+class OutputTooLongError(Exception):
+    """The model hit NUM_PREDICT before finishing -- the JSON is cut off. Not
+    an OllamaError: with temperature 0.2 and the same facts, the same posting
+    would most likely overflow again, so it's a property of the posting (a
+    content failure), not of the server."""
 
 
 class PromptTooLongError(Exception):
@@ -63,6 +72,27 @@ class PromptTooLongError(Exception):
     so Ollama would silently drop part of it. Raised before anything is sent.
     Not an OllamaError: it's a property of this posting's prompt, not of the
     server, and would fail the same way every run."""
+
+
+# One LLM call at a time across the whole Python service. Every orchestrator
+# instance's generation goes through this one process, and Ollama serves one
+# request at a time anyway -- so calls wait here, *before* the request is sent
+# and the HTTP timeout starts. Without it, a call queued behind another
+# instance's hour-long generation could hit TIMEOUT_SECONDS while still
+# waiting, and be reported as an infrastructure failure that stops the run.
+# One semaphore per event loop: an asyncio.Semaphore belongs to the loop it
+# was first used on (the service runs one long-lived loop; scripts that call
+# asyncio.run() repeatedly get a fresh one each time).
+_slots: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore]" = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _ollama_slot() -> asyncio.Semaphore:
+    loop = asyncio.get_running_loop()
+    if loop not in _slots:
+        _slots[loop] = asyncio.Semaphore(1)
+    return _slots[loop]
 
 
 # async function to get llm response from ollama.
@@ -92,7 +122,7 @@ async def llm_ollama(
     # bug was reported as an OllamaError. One extra connection setup per
     # ~15-minute call costs nothing.
     try:
-        async with AsyncClient(host=OLLAMA_HOST, timeout=TIMEOUT_SECONDS) as client:
+        async with _ollama_slot(), AsyncClient(host=OLLAMA_HOST, timeout=TIMEOUT_SECONDS) as client:
             response: ChatResponse = await client.chat(
                 model=model,
                 messages=[
@@ -117,6 +147,6 @@ async def llm_ollama(
     # Hitting the cap means the JSON was cut off mid-object. Raised here as its
     # own failure rather than left to surface later as a confusing INVALID_JSON.
     if response.done_reason == "length":
-        raise OllamaError(f"output cut off at num_predict={NUM_PREDICT} tokens")
+        raise OutputTooLongError(f"output cut off at num_predict={NUM_PREDICT} tokens")
 
     return response.message.content

@@ -6,8 +6,9 @@ from pathlib import Path
 from playwright.async_api import Error as PlaywrightError
 from pypdf.errors import PyPdfError
 
+from matching.matcher.matcher import is_fit_fact
 from tailoring.gaps.gaps import GapDecision, decide_gaps
-from tailoring.llm.client import OllamaError, PromptTooLongError, llm_ollama
+from tailoring.llm.client import OllamaError, OutputTooLongError, PromptTooLongError, llm_ollama
 from tailoring.prompts.application import build_application_prompt
 from tailoring.prompts.cover_letter import build_cover_letter_prompt
 from tailoring.prompts.resume import build_resume_prompt
@@ -50,37 +51,69 @@ class GenerateResult:
 _BROKEN_RESPONSE = (WriteError.INVALID_JSON, WriteError.VALIDATION_ERROR)
 
 
-# Facts the gap rules govern, kept out of the resume and cover letter prompts
-# even when search ranks them: known_gap:* (the cover letter gets the gaps that
-# apply in their own block), education (holds the GPA and degree status),
-# professional_experience (the experience gap), and job_preference:* (screening
-# answers like visa and salary, answered deterministically, never in prose).
-# Otherwise a fact search happened to return could put a gap the posting never
-# asked about straight back into the letter. The application call keeps all
-# facts -- a free-text answer about experience or education must stay honest.
-_GAP_GOVERNED_PREFIXES = ("known_gap:", "job_preference:")
-_GAP_GOVERNED_IDS = ("education", "professional_experience")
-
-
+# Facts kept out of the resume and cover letter prompts: exactly the ones
+# matching doesn't count as fit (matching.matcher.is_fit_fact) -- known_gap:*
+# (the cover letter gets the gaps that apply in their own block), education
+# (GPA, degree status), professional_experience, job_preference:* (screening
+# answers like visa and salary), and the logistics preferences (work_mode,
+# regions...: "remote preferred" doesn't belong in a letter for an on-site
+# role). Otherwise a fact search happened to return could put a gap the
+# posting never asked about straight back into the letter. One definition,
+# shared with matching, instead of a second list here that drifted from it.
+# The application call keeps all facts -- a free-text answer about experience
+# or education must stay honest.
 def _writing_facts(facts: list[dict]) -> list[dict]:
-    return [
-        f
-        for f in facts
-        if not f["doc_id"].startswith(_GAP_GOVERNED_PREFIXES)
-        and f["doc_id"] not in _GAP_GOVERNED_IDS
-    ]
+    return [f for f in facts if is_fit_fact(f["doc_id"])]
 
 
-# Job posting IDs come from outside (ATS data), so they're reduced to a safe
+# Job posting IDs come from outside (ATS data), so they're encoded into a safe
 # filename stem before touching the filesystem -- an ID containing "/" or ".."
-# must not be able to escape output_dir. tracking/ (not yet built) keys its
-# per-application files by the same ID and should reuse this, so two IDs that
-# differ only in special characters map to the same file in both places.
+# must not be able to escape output_dir. Letters, digits, "_" and "-" stay;
+# every other character becomes "~" plus its UTF-8 bytes in hex (":" -> "~3a").
+# "~" itself is always encoded, so the mapping is reversible: two different
+# IDs can never share a stem. (Replacing with "_" made "greenhouse:acme_co:1"
+# and "greenhouse:acme:co_1" collide -- in tracking/, which keys its files by
+# this stem, that would be a silent false "already applied".) tracking/ (not
+# yet built) should reuse this function.
+_FILENAME_SAFE = re.compile(r"[A-Za-z0-9_-]")
+
+
 def filename_stem(posting_id: object) -> str:
-    stem = re.sub(r"[^A-Za-z0-9_-]", "_", str(posting_id))
-    if not stem.strip("_"):
-        raise ValueError(f"job posting id {posting_id!r} has no usable filename characters")
-    return stem
+    text = str(posting_id)
+    if not re.search(r"[A-Za-z0-9]", text):
+        raise ValueError(f"job posting id {posting_id!r} has no letters or digits")
+    return "".join(
+        char if _FILENAME_SAFE.fullmatch(char) else "".join(f"~{b:02x}" for b in char.encode())
+        for char in text
+    )
+
+
+# One LLM call, with every failure llm_ollama() can raise mapped to its
+# WriteError -- explicitly, by type. Returns (response, None) or (None, error).
+async def _call_llm(step: str, prompt: str, schema: dict) -> tuple[str | None, WriteError | None]:
+    try:
+        return await llm_ollama(prompt, SYSTEM_PROMPT, schema), None
+    except PromptTooLongError:
+        logger.exception("generate: %s prompt too long", step)
+        return None, WriteError.PROMPT_TOO_LONG
+    except OutputTooLongError:
+        logger.exception("generate: %s output hit the token cap", step)
+        return None, WriteError.OUTPUT_TOO_LONG
+    except OllamaError:
+        logger.exception("generate: %s LLM call failed", step)
+        return None, WriteError.LLM_FAILURE
+
+
+# When a later step kills the application (a content or infrastructure
+# failure), PDFs already rendered for it are useless -- the application has
+# concluded -- so they're deleted here rather than left for a caller that may
+# never come. Their parsed text stays in .content.
+def _discard_rendered(result: GenerateResult) -> GenerateResult:
+    for written in (result.resume, result.cover_letter):
+        if written is not None and written.path is not None:
+            Path(written.path).unlink(missing_ok=True)
+            written.path = None
+    return result
 
 
 async def generate(
@@ -114,7 +147,7 @@ async def generate(
 
     # Per-application filenames, keyed by job posting ID (same convention
     # tracking/ already uses for its own per-application JSON files -- see
-    # ../CLAUDE.md's tracking/ section). Without this, every call to generate()
+    # ../tracking/README.md). Without this, every call to generate()
     # would write to the same "resume.pdf"/"cover_letter.pdf", silently
     # overwriting whatever the previous posting produced. A missing "id" is a
     # malformed job_posting -- let the KeyError propagate rather than papering
@@ -127,43 +160,35 @@ async def generate(
     cover_letter_path = str(out / f"{stem}_cover_letter.pdf")
 
     # generate resume
-    resume_prompt = build_resume_prompt(writing_facts, job_posting)
-    try:
-        resume_response = await llm_ollama(resume_prompt, SYSTEM_PROMPT, RESUME_JSON_SCHEMA)
-    except PromptTooLongError:
-        logger.exception("generate: resume prompt too long")
-        result.resume = WriteResult(path=None, error=WriteError.PROMPT_TOO_LONG)
-        return result
-    except OllamaError:
-        logger.exception("generate: resume LLM call failed")
-        result.resume = WriteResult(path=None, error=WriteError.LLM_FAILURE)
+    response, error = await _call_llm(
+        "resume", build_resume_prompt(writing_facts, job_posting), RESUME_JSON_SCHEMA
+    )
+    if error:
+        result.resume = WriteResult(path=None, error=error)
         return result
     try:
-        result.resume = await write_resume(resume_response, personal, resume_path)
+        result.resume = await write_resume(response, personal, resume_path)
     except (PlaywrightError, PyPdfError):
         logger.exception("generate: rendering the resume failed")
+        # a crashed render may have left a partial file behind
+        Path(resume_path).unlink(missing_ok=True)
         result.resume = WriteResult(path=None, error=WriteError.RENDER_FAILURE)
         return result
     if result.resume.error in _BROKEN_RESPONSE:
         return result
 
     # generate cover letter
-    cover_letter_prompt = build_cover_letter_prompt(writing_facts, job_posting, gaps_to_raise)
-    try:
-        cover_letter_response = await llm_ollama(
-            cover_letter_prompt, SYSTEM_PROMPT, cover_letter_schema(bool(gaps_to_raise))
-        )
-    except PromptTooLongError:
-        logger.exception("generate: cover letter prompt too long")
-        result.cover_letter = WriteResult(path=None, error=WriteError.PROMPT_TOO_LONG)
-        return result
-    except OllamaError:
-        logger.exception("generate: cover letter LLM call failed")
-        result.cover_letter = WriteResult(path=None, error=WriteError.LLM_FAILURE)
-        return result
+    response, error = await _call_llm(
+        "cover letter",
+        build_cover_letter_prompt(writing_facts, job_posting, gaps_to_raise),
+        cover_letter_schema(bool(gaps_to_raise)),
+    )
+    if error:
+        result.cover_letter = WriteResult(path=None, error=error)
+        return _discard_rendered(result)
     try:
         result.cover_letter = await write_cover_letter(
-            cover_letter_response,
+            response,
             personal,
             output_path=cover_letter_path,
             gaps_expected=bool(gaps_to_raise),
@@ -171,31 +196,29 @@ async def generate(
         )
     except (PlaywrightError, PyPdfError):
         logger.exception("generate: rendering the cover letter failed")
+        Path(cover_letter_path).unlink(missing_ok=True)
         result.cover_letter = WriteResult(path=None, error=WriteError.RENDER_FAILURE)
-        return result
+        return _discard_rendered(result)
     if result.cover_letter.error in _BROKEN_RESPONSE:
-        return result
+        return _discard_rendered(result)
 
     # generate form answers -- skipped when the form has no free-text
     # questions, rather than spending a full LLM call on an empty object
     if not questions:
         result.application = ParseResult(answers={})
         return result
-    application_prompt = build_application_prompt(facts, job_posting, questions)
-    try:
-        application_response = await llm_ollama(
-            application_prompt, SYSTEM_PROMPT, application_answers_schema(questions)
-        )
-    except PromptTooLongError:
-        logger.exception("generate: application prompt too long")
-        result.application = ParseResult(answers=None, error=WriteError.PROMPT_TOO_LONG)
-        return result
-    except OllamaError:
-        logger.exception("generate: application LLM call failed")
-        result.application = ParseResult(answers=None, error=WriteError.LLM_FAILURE)
-        return result
+    response, error = await _call_llm(
+        "application",
+        build_application_prompt(facts, job_posting, questions),
+        application_answers_schema(questions),
+    )
+    if error:
+        result.application = ParseResult(answers=None, error=error)
+        return _discard_rendered(result)
     # parse_application_answers is sync -- no rendering, so no Playwright/pypdf
     # failure mode to catch here the way write_resume/write_cover_letter have.
-    result.application = parse_application_answers(application_response, questions)
+    result.application = parse_application_answers(response, questions)
+    if result.application.error in _BROKEN_RESPONSE:
+        return _discard_rendered(result)
 
     return result

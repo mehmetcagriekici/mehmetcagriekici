@@ -11,14 +11,17 @@ from matching.document_builder.document_builder import (
 from matching.hybrid_search.hybrid_search import HybridSearch
 
 
-def _is_fit_fact(doc_id: str) -> bool:
+# Whether a fact counts as evidence of fit. Not fit: gap and screening-answer
+# facts, education, and the logistics preferences (NON_FIT_FACT_PREFIXES /
+# NON_FIT_FACT_IDS). tailoring/ uses this same definition to keep those facts
+# out of the resume and cover letter, so there's one list, not two.
+def is_fit_fact(doc_id: str) -> bool:
     return not doc_id.startswith(NON_FIT_FACT_PREFIXES) and doc_id not in NON_FIT_FACT_IDS
 
 
-# facts at or above the threshold that count as evidence of fit -- gap and
-# screening-answer facts excluded (see NON_FIT_FACT_PREFIXES)
+# facts at or above the threshold that count as evidence of fit (is_fit_fact)
 def fit_fact_count(rrf_results: list[dict], threshold: float = MATCH_RRF_THRESHOLD) -> int:
-    return sum(1 for r in rrf_results if r["rrf_score"] >= threshold and _is_fit_fact(r["doc_id"]))
+    return sum(1 for r in rrf_results if r["rrf_score"] >= threshold and is_fit_fact(r["doc_id"]))
 
 
 # turns hybrid_search's ranked output into the actual go/no-go verdict

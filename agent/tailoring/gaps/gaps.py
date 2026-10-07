@@ -46,9 +46,11 @@ def _normalize(text: str) -> str:
 
 
 # every string in the posting's content fields (posting_content -- never ids,
-# urls, or the stored raw ATS response), flattened
-def _posting_text(job_posting: dict) -> str:
-    return _normalize(_flatten(posting_content(job_posting)))
+# urls, or the stored raw ATS response), flattened; `without` drops fields a
+# rule must not read
+def _posting_text(job_posting: dict, without: tuple[str, ...] = ()) -> str:
+    content = {k: v for k, v in posting_content(job_posting).items() if k not in without}
+    return _normalize(_flatten(content))
 
 
 # The lines the years rule checks: every line of the description -- sourcing
@@ -70,15 +72,34 @@ def _first_match(pattern: re.Pattern, text: str) -> str | None:
     return match.group(0) if match else None
 
 
-# "3+ years", "5-7 years", "2 years"
-_YEARS = re.compile(r"\b\d+\s*(?:\+|-\s*\d+)?\s*years?\b", re.I)
+# "3+ years", "5-7 years", "2 years", and spelled out: "two years" -- counted
+# only when shaped like a requirement: "years" followed by a requirement word
+# ("3+ years of Go", "5 years building", "years' experience"), or a line that
+# also says "experience". "We are 12 years old" / "founded 10 years ago" don't
+# count -- they'd otherwise be quoted to the model as the posting's requirement.
+_YEARS = r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:\+|-\s*\d+)?\s*years?\b"
+_YEARS_REQUIREMENT = re.compile(
+    _YEARS + r"'?\s*(?:of|in|with|experience|building|working|developing|designing|writing"
+    r"|professional|hands-on|industry|commercial)\b",
+    re.I,
+)
+_YEARS_ANY = re.compile(_YEARS, re.I)
+
+
+def _is_years_requirement(line: str) -> bool:
+    return bool(
+        _YEARS_REQUIREMENT.search(line)
+        or (_YEARS_ANY.search(line) and re.search(r"\bexperience\b", line, re.I))
+    )
+
+
 _PROFESSIONAL_EXPERIENCE = re.compile(
     r"\b(?:professional|work|industry|commercial|paid)\s+experience\b", re.I
 )
 
 
 def _no_professional_experience(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
-    years_lines = [line for line in _candidate_lines(job_posting) if _YEARS.search(line)]
+    years_lines = [line for line in _candidate_lines(job_posting) if _is_years_requirement(line)]
     if years_lines:
         return True, f"posting asks for years of experience: {years_lines[0]!r}", years_lines
     phrase = _first_match(_PROFESSIONAL_EXPERIENCE, text)
@@ -88,12 +109,20 @@ def _no_professional_experience(job_posting: dict, text: str) -> tuple[bool, str
 
 
 _DEGREE = re.compile(
-    r"\b(?:degree|bachelor'?s?|master'?s|b\.?sc|m\.?sc|bs/ms|ba/bs|diploma|ph\.?\s?d)\b", re.I
+    r"\b(?:degree|bachelor'?s?|master'?s|b\.?sc|m\.?sc|bs/ms|ba/bs|diploma|ph\.?\s?d)\b"
+    # Short forms (BS, M.S., BA, MA) only in degree context -- followed by "in",
+    # "degree", "or", or a slash -- and case-sensitive, so lowercase "ms"/"ma"
+    # never match. (State codes like "Boston, MA" are kept out by not reading
+    # the location field at all, see _in_progress_degree.)
+    r"|(?-i:\b(?:B\.?S|M\.?S|B\.?A|M\.?A)\.?)(?=\s+(?:in|degree|or)\b|/)",
+    re.I,
 )
 
 
 def _in_progress_degree(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
-    word = _first_match(_DEGREE, text)
+    # location excluded: a degree requirement never appears there, but US state
+    # codes do ("Boston, MA or Remote" read as a degree before)
+    word = _first_match(_DEGREE, _posting_text(job_posting, without=("location",)))
     if word:
         return True, f"posting mentions {word!r}", []
     return False, "posting doesn't ask for a degree", []
@@ -125,20 +154,34 @@ _NOT_FULLY_REMOTE = re.compile(
 _HOURS_OR_UNRESTRICTED = re.compile(
     r"[\w/+-]*\s*\btime ?zones?\b|\b(?:utc|gmt)(?:\s*[+-]\s*\d+)?\b"
     r"|\b(?:cet|cest|est|edt|pst|pdt)\b|\bworldwide\b|\banywhere\b|\bglobal(?:ly)?\b"
-    r"|\bteam\b|\bfriendly\b|\bhours?\b|\boverlap\b",
+    r"|\bteam\b|\bfriendly\b|\bfirst\b|\bfully\b|\bonly\b|\bhours?\b|\boverlap\b",
     re.I,
 )
-# work authorization or residence tied to a place -- "authorized to work in the
-# US", "eligible to work in the EU", "must reside in Canada". On a fully remote
-# role this is what matters; a bare "we cannot sponsor visas" doesn't, since
-# working remotely from Turkey needs no visa. The place must start with a
-# capital letter (keywords are matched case-insensitively). "based in Berlin"
-# describing the company's office also matches -- raising there is the safe
-# direction.
-_PLACE_BOUND_AUTHORIZATION = re.compile(
-    r"(?i:\b(?:authori[sz]ed|eligib(?:le|ility)|right|permitted|reside|residing|resident"
-    r"|located|based|live|living)\b)[^.\n]{0,40}?(?i:\bin\s+(?:the\s+)?)"
-    r"(?P<place>[A-Z][\w.-]*(?:\s+[A-Z][\w.-]*)*)"
+# Work authorization or residence required *of the candidate*, tied to a place:
+# "authorized to work in the United States", "eligible to work in the EU",
+# "candidates must be based in Canada", "you must reside in Germany". On a
+# fully remote role this is what matters -- a bare "we cannot sponsor visas"
+# doesn't, since working remotely from Turkey needs no visa. Only
+# candidate-directed phrasings count: a company blurb's "Acme is based in
+# Berlin" appears in most postings and says nothing about where you must live.
+# The place is capitalized words on the same line (keywords are matched
+# case-insensitively).
+_PLACE = r"(?P<place>[A-Z][\w-]*(?:\.[A-Z][\w-]*)*\.?(?:[ \t]+[A-Z][\w-]*(?:\.[A-Z][\w-]*)*\.?)*)"
+_PLACE_BOUND_AUTHORIZATION = (
+    re.compile(
+        r"(?i:\b(?:authori[sz]ed|eligib(?:le|ility)|right)\s+to\s+work\s+in\s+(?:the\s+)?)" + _PLACE
+    ),
+    re.compile(
+        r"(?i:\b(?:must|should|need\s+to|required\s+to)\s+(?:be\s+)?"
+        r"(?:based|located|resid(?:e|ing|ent)|liv(?:e|ing))\s+in\s+(?:the\s+)?)" + _PLACE
+    ),
+    # "open to candidates in the EU", "applicants located in Canada"
+    re.compile(
+        r"(?i:\b(?:candidates|applicants)\s+(?:(?:based|located|residing)\s+)?in\s+(?:the\s+)?)"
+        + _PLACE
+    ),
+    # "US-based candidates only", "EU-based applicants"
+    re.compile(r"\b(?P<place>[A-Z][A-Za-z.]*)-based\s+(?i:candidates|applicants|residents)\b"),
 )
 _WORKPLACE_MODES = {
     "remote": "remote",
@@ -151,23 +194,22 @@ _WORKPLACE_MODES = {
 }
 
 
-# the structured work mode, if sourcing provided one (workplace_type from
-# Lever/Ashby, or a boolean "remote" flag) -- None means only location text
+# the structured work mode (the normalized posting's workplace_type, real for
+# Lever/Ashby) -- None means only location text is available
 def _workplace_mode(job_posting: dict) -> str | None:
-    mode = _WORKPLACE_MODES.get(str(job_posting.get("workplace_type") or "").strip().lower())
-    if mode is None and job_posting.get("remote") is True:
-        return "remote"
-    return mode
+    return _WORKPLACE_MODES.get(str(job_posting.get("workplace_type") or "").strip().lower())
 
 
 def _visa_sponsorship_needed(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
     # location text and the structured work mode are read separately -- joined
-    # into one string, a second "remote" (or a "True" flag) after "Remote" was
-    # mistaken for a region qualifier
+    # into one string, a second "remote" after "Remote" was once mistaken for a
+    # region qualifier
     location = str(job_posting.get("location") or "").strip()
     mode = _workplace_mode(job_posting)
 
-    if _TURKEY.search(location):
+    # Turkey exempts the gap only when it's the sole location -- "Istanbul or
+    # Berlin" may well mean Berlin
+    if _TURKEY.search(location) and not re.search(r"\bor\b|/|;|\|", location):
         return False, f"role is located in Turkey: {location!r}", []
 
     if mode in ("hybrid", "onsite"):
@@ -180,17 +222,22 @@ def _visa_sponsorship_needed(job_posting: dict, text: str) -> tuple[bool, str, l
         # resolves toward raising the gap
         return True, f"not a fully remote role: {location!r}", []
 
-    # Remote. "Remote (US/Canada)" -- or a remote work mode with location
-    # "United States" -- still requires living/being authorized there;
-    # "Remote (EU timezones)" only constrains hours.
-    qualifier = location[remote_in_location.end() :] if remote_in_location else location
-    qualifier = qualifier.strip(" -–—,()")
+    # Remote. "Remote (US/Canada)", "US - Remote", "United States (Remote)" --
+    # or a remote work mode with location "United States" -- still require
+    # living/being authorized there; "Remote (EU timezones)" only constrains
+    # hours. So the word "remote" is removed and whatever is left, on either
+    # side, is the qualifier. (Reading only the text after "Remote" missed
+    # every region written before it.)
+    qualifier = _REMOTE.sub(" ", location)
     if re.search(r"[^\W\d_]{2,}", _HOURS_OR_UNRESTRICTED.sub(" ", qualifier)):
         return True, f"remote, but restricted to a region: {location!r}", []
 
-    for match in _PLACE_BOUND_AUTHORIZATION.finditer(text):
-        if not _TURKEY.search(match.group("place")):
-            return True, f"remote, but posting requires {match.group(0).strip()!r}", []
+    matches = (m for pattern in _PLACE_BOUND_AUTHORIZATION for m in pattern.finditer(text))
+    for match in matches:
+        place = match.group("place")
+        if not _TURKEY.search(place):
+            required = match.group(0).strip().rstrip(".")
+            return True, f"remote, but posting requires {required!r}", []
 
     return False, f"fully remote role: {location or mode!r}", []
 

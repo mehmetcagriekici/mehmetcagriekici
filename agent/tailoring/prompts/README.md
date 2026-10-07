@@ -7,7 +7,7 @@ Builds the four prompt strings fed into `llm/client.py`'s `llm_ollama` — one s
 ## Files
 
 - `system_prompt.py` — rules shared identically across all three calls: the honesty constraint (organize/format/select from `source_of_truth` content only, never invent), the prompt-injection framing that labels the posting (`<job_posting>`), form questions (`<questions>`), and posting text quoted elsewhere as untrusted data, and the JSON-output instruction. `_shared.py`'s `format_posting()` sends only the posting's content fields (`posting_content()` — no ids, urls, or `raw`), and escapes `<`/`>` in all of that untrusted text (form field ids included) (`\u003c`/`\u003e` in the posting's JSON, HTML entities elsewhere), so it can't close a tag early and pose as prompt structure.
-- `resume.py` — user prompt for the resume call, built from the facts that cleared matching's threshold (`matching_facts`, as `(id, content)` Documents) plus the one-page and template-structure constraints for `write/templates/resume.html`. `RESUME_SCHEMA`:
+- `resume.py` — user prompt for the resume call, built from the facts that cleared matching's threshold (`matching_facts` — result dicts; the prompt reads each one's `doc_id` and `content`) plus the one-page and template-structure constraints for `write/templates/resume.html`. `RESUME_SCHEMA`:
   - `summary` — matches `profile.json`'s `summary` string.
   - `skills` — an object keyed by category (not a flat array), matching how each skill fact is actually indexed, so the template's grouped Skills section can be reconstructed from what the model is given.
   - `projects[]` — `name`/`dates`/`tech`/`description`/`bullets`, plus `status` and `repo` (real project facts carry both).

@@ -29,15 +29,30 @@ Kept separate from the manual cover-letter/resume workflow at the repo root (`..
 
 A duplicate check against `tracking/` runs right after sourcing, before matching, so a posting already applied to — or permanently excluded after a failure or rejection — never burns a match/generate cycle.
 
-**Goal:** not every possible job, but the best-matching ones — 10–50 applications a week.
-
 ## Deployment model
 
-Runs on a local k8s distro (k3s/minikube-style) on the user's own machine. The Go orchestrator runs as multiple instances, one per ATS target (Greenhouse, Lever, etc.) — not per module, not per job board (LinkedIn/Glassdoor are out of scope). Each instance is configured with which ATS to target, a run-duration, and an application cap. A run fetches every listed company's board on that ATS once, drops stale (30+ days) and already-seen postings, matches and ranks the rest, then generates from the top until it has submitted the cap or runs out of time. Role/location/tech fit is not instance config — it's decided by `matching/` against a shared preference set in `source_of_truth/`. The user starts/restarts instances manually and reads the end-of-run report afterward; this isn't a hands-off system.
+Runs on a local k8s distro (k3s/minikube-style) on the user's own machine. The Go orchestrator runs as multiple instances, one per ATS target (Greenhouse, Lever, etc.) — not per module, not per job board (LinkedIn/Glassdoor are out of scope). The Python and TypeScript services are shared singletons every Go instance calls into, not one trio per instance. `source_of_truth/` is a single shared, read-only resource; `tracking/` is shared and read-write. The user starts/restarts instances manually and reads the end-of-run report afterward — this isn't a hands-off system.
 
-The Python and TypeScript services are shared singletons every Go instance calls into, not one trio per instance. `source_of_truth/` is a single shared, read-only resource; `tracking/` is shared and read-write, so concurrent instances can't double-apply to the same role; it holds full records for submitted applications and minimal permanent-exclusion records for postings that failed generation or were rejected.
+## Run lifecycle
 
-**Review notifications:** email, via a dedicated Gmail account. A push email fires immediately when something routes to review, with approve/reject links; unanswered items default to reject once the instance's run ends (nothing is submitted, but no exclusion is recorded, so the posting can come back in a later run). The email shows the full generated package inline (not attachments, not summarized) plus why it was flagged. A separate end-of-run report summarizes each instance's whole run (submitted / matched-but-not-submitted / skipped / errors). The approve/reject link opens a one-tap confirm page (not a bare GET, to avoid email scanners auto-triggering it), reachable via a Cloudflare Tunnel — chosen over Tailscale so it opens in any browser with no app install. Needs a domain (not yet owned) and a token-protected link, since the endpoint is public.
+**Goal:** not every possible job, but the best-matching ones — 10–50 applications a week.
+
+1. **Start.** A Go instance passes `{ats, run_duration, application_cap}` to Python. Python owns the loop from here; Go's part is bridging each generated application to the TypeScript form service and reporting each submission's result back, so Python can count submissions.
+2. **Fetch once.** Every enabled company board on that ATS, fetched once — no re-fetching mid-run; at ~1 hour of generation per application, discovery isn't the bottleneck (`sourcing/`).
+3. **Filter.** Drop postings older than 30 days, and postings `tracking/` already holds — applied to, or permanently excluded.
+4. **Match and rank.** `matching/` decides pass/fail; passing postings are ranked by `matching_fact_count`, ties broken by newest `posted_at` first, then by id.
+5. **Generate, top down.** `tailoring/` generates for the highest-ranked posting, `review_gate/` checks it, then it's submitted or routed to the user's review. Repeat until the **submitted-application cap** (reviews don't count until approved and submitted) or the run-duration is reached.
+6. **What happens to each posting:**
+   - **Submitted** → a full application record in `tracking/` (with the generated text).
+   - **Content failure** (bad model output for this posting, a prompt or output too long, a Controller rejection, the user's rejection) → a permanent exclusion record in `tracking/`; it never comes back.
+   - **Infrastructure failure** (Ollama down or timing out, Chromium crashing) → no record, and **the run stops**; the posting comes back next run. See `tailoring/write/README.md` for which error is which.
+   - **Review unanswered at run end** (Controller review or one-page overflow) → not submitted, no record; it comes back next run with a fresh email.
+   - **Matched but not reached** → no record; re-ranked next run.
+
+   Just before submitting, `tracking/` is checked again for the same company + role — generation takes about an hour, and another instance may have applied in the meantime.
+7. **End-of-run report**, for the user to read at their own pace: submitted, matched-but-not-submitted, skipped and errors — specifically stale postings, boards that failed to fetch (with the error), postings that couldn't be normalized, exclusions written (with reason), and reviews that timed out.
+
+**Review notifications:** email, via a dedicated Gmail account, fired immediately when something routes to review — the full generated package inline plus why it was flagged, with approve/reject links behind a one-tap confirm page reachable via a Cloudflare Tunnel. Details in `review_gate/README.md`.
 
 ## Python service setup
 
@@ -48,6 +63,7 @@ python -m venv venv && . venv/bin/activate
 pip install -r requirements.txt           # pinned; declares PyTorch's CPU-only index itself
 pip install -e . --no-deps                # makes matching/ and tailoring/ importable
 playwright install --with-deps chromium   # tailoring/write renders PDFs via headless Chromium
+python -m nltk.downloader punkt_tab stopwords  # matching's tokenizer data (else downloaded on first import -- fails offline)
 sudo apt install fonts-liberation         # the templates pin Liberation Sans (see below)
 ollama pull qwen2.5:14b                   # tailoring/llm's default model (~9 GB)
 ```

@@ -22,7 +22,7 @@ def _dumps(value) -> str:
 
 
 def _load_json(path: str):
-    with open(path, "r") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 

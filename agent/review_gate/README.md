@@ -20,6 +20,6 @@ Four live runs of `tailoring/` against local Ollama (2026-08-05 and 2026-09-30, 
 - **Misattribution:** a technology credited to a project whose fact doesn't list it.
 - **Filler** despite being banned by name ("strong background", "I believe my skills align well").
 
-The default model is now `qwen2.5:14b`; whether it fixes some of these is pending a live run. **Cost to plan for:** if the Controller is a second call on the same 14B, it adds roughly another ~15 minutes per application on top of ~45–60 for generation — still undecided whether it shares the model or uses a separate one.
+The 14B live run (2026-10-07) fixed the misattribution and the "production"/"at scale" claims and described an early-stage project honestly, but still produced filler ("I am excited to apply", "passion"), an upgraded claim ("Experienced backend engineer"), an unsupported "frontend" claim echoing the posting's wording, and a phrasing-rule instruction from `known-gaps.json` copied into a letter. **Cost to plan for:** if the Controller is a second call on the same 14B, it adds roughly another ~15 minutes per application on top of ~45–60 for generation — still undecided whether it shares the model or uses a separate one.
 
 Planning stage — no code yet. See `../CLAUDE.md`.

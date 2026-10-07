@@ -20,7 +20,7 @@ One call, `hybrid_search(job_posting, source_of_truth)`, per posting. No chained
 
 **Soft/inferred requirements** (e.g. "strong communication skills") are dropped rather than arbitrated — not resolved by an LLM or anything else. Accepted tradeoff, revisit only if it costs real matches.
 
-Sourcing applies no pre-filter — role/location/tech fit is decided entirely here. Postings that pass are **ranked by `matching_fact_count`** (the number of fit facts at or above the threshold, returned by `evaluate_posting`; ties ranked deterministically) and handed to `tailoring/` highest first, until the run's submitted-application cap is reached (decided 2026-10-07 — the goal is the best-matching 10–50 applications a week, not every match). The LLM has no vote on fit, only on generating materials for postings matching has already approved.
+Sourcing applies no pre-filter — role/location/tech fit is decided entirely here. Postings that pass are **ranked by `matching_fact_count`** (the number of fit facts at or above the threshold, returned by `evaluate_posting`; ties broken by newest `posted_at` first, then by posting id). Expect many ties: a fact only clears 0.028 by ranking well in *both* lists (one list alone gives at most 1/61 ≈ 0.016), so when the two lists broadly agree at most ~11 facts can clear it, and passing postings fall in a narrow range of counts. They're handed to `tailoring/` highest first, until the run's submitted-application cap is reached (decided 2026-10-07 — the goal is the best-matching 10–50 applications a week, not every match). The LLM has no vote on fit, only on generating materials for postings matching has already approved.
 
 ## Document construction
 

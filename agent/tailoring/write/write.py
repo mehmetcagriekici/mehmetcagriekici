@@ -22,7 +22,7 @@ class WriteError(Enum):
     resume/cover-letter field, and application answers whose keys don't match
     the questions asked. OVERFLOW is specific to write_resume()/write_cover_letter():
     real content that's too long and must route to the user for approve/reject
-    (see ../README.md, ../../CLAUDE.md) — the result still carries the parsed
+    (see ../README.md) — the result still carries the parsed
     content and the rendered file's path, for the review email and tracking/.
     parse_application_answers() never produces it, since there's no page to
     overflow. UNANSWERED/ANSWER_TOO_LONG are its counterparts: real answers exist
@@ -49,6 +49,9 @@ class WriteError(Enum):
     # the prompt might not fit Ollama's context window (llm.client.PromptTooLongError),
     # caught before anything was sent -- a caller constructs this, like LLM_FAILURE
     PROMPT_TOO_LONG = "prompt_too_long"
+    # the model hit NUM_PREDICT before finishing (llm.client.OutputTooLongError)
+    # -- a caller constructs this, like LLM_FAILURE
+    OUTPUT_TOO_LONG = "output_too_long"
 
 
 # How a failure affects the posting (decided 2026-10-07). Content failures are
@@ -60,7 +63,15 @@ class WriteError(Enum):
 # its best-ranked postings. OVERFLOW/UNANSWERED/ANSWER_TOO_LONG are neither --
 # real content that routes to the user's review.
 CONTENT_FAILURES = frozenset(
-    {WriteError.INVALID_JSON, WriteError.VALIDATION_ERROR, WriteError.PROMPT_TOO_LONG}
+    {
+        WriteError.INVALID_JSON,
+        WriteError.VALIDATION_ERROR,
+        WriteError.PROMPT_TOO_LONG,
+        # same facts, temperature 0.2: it would most likely overflow again --
+        # as an infrastructure failure it would stop every future run from the
+        # top of the ranking
+        WriteError.OUTPUT_TOO_LONG,
+    }
 )
 INFRASTRUCTURE_FAILURES = frozenset({WriteError.LLM_FAILURE, WriteError.RENDER_FAILURE})
 
@@ -68,7 +79,7 @@ INFRASTRUCTURE_FAILURES = frozenset({WriteError.LLM_FAILURE, WriteError.RENDER_F
 # content is the parsed Resume/CoverLetter whenever the LLM response parsed and
 # validated — including on OVERFLOW, where path also points at the rendered
 # (too-long) file. The review email and tracking/ need the full text, and the
-# on-disk PDF is deleted once the application concludes (../../CLAUDE.md), so
+# on-disk PDF is deleted once the application concludes (../../tracking/README.md), so
 # the text can't be recovered from the file later.
 @dataclass
 class WriteResult:
@@ -269,7 +280,7 @@ async def _render_to_pdf(
     # never ship unnoticed.
     page_count = len(PdfReader(output_path).pages)
     if page_count != 1:
-        # One page is a hard constraint (../README.md, ../../CLAUDE.md) — an
+        # One page is a hard constraint (../README.md) — an
         # overflow must route to the user for review, never ship or auto-retry.
         # That routing (email + approve/reject) isn't built yet. The path is
         # still returned: the file stays on disk until the user answers.
