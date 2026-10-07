@@ -14,6 +14,6 @@ The structured, hand-maintained profile store the rest of the pipeline reads fro
 
 Work authorization, visa, salary, notice period, language, and EEO questions are answered directly from structured fields here — no LLM. The LLM only touches this store for generative work (resumes, cover letters, free-text behavioral answers), always adapting real content, never inventing. No caching — every answer regenerates fresh.
 
-Read directly by `sourcing/`, `matching/`, and `tailoring/`; Go and TypeScript work from Python's generated output rather than reading `profile.json` themselves.
+Read directly by `matching/` and `tailoring/` (`sourcing/` keeps its own company list instead); Go and TypeScript work from Python's generated output rather than reading `profile.json` themselves.
 
 Status: all five files built and in use. `matching/` is built on top of this store — see `../matching/README.md`. See `../CLAUDE.md`.
