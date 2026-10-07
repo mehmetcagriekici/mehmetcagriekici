@@ -119,7 +119,7 @@ def _discard_rendered(result: GenerateResult) -> GenerateResult:
 async def generate(
     facts: list[dict],
     job_posting: dict,
-    personal: dict,
+    profile: dict,
     questions: list[dict],
     known_gaps: list[dict],
     output_dir: str,
@@ -133,6 +133,9 @@ async def generate(
     # into the matching WriteError. Anything else is a genuine bug and is left
     # to propagate rather than being caught and hidden.
     result = GenerateResult()
+    # profile.json: its `personal` block fills both documents' headers, its
+    # `summary` (the candidate's own words) anchors the resume summary
+    personal = profile["personal"]
 
     # known_gaps is known-gaps.json's full list, independent of hybrid_search's
     # ranking (option (b), ../CLAUDE.md). Empty means the caller didn't load it
@@ -145,9 +148,9 @@ async def generate(
     gaps_to_raise = [d for d in result.gap_decisions if d.applies]
     writing_facts = _writing_facts(facts)
 
-    # Per-application filenames, keyed by job posting ID (same convention
-    # tracking/ already uses for its own per-application JSON files -- see
-    # ../tracking/README.md). Without this, every call to generate()
+    # Per-application filenames, keyed by job posting ID (the same convention
+    # tracking/ is designed to use for its per-application JSON files -- see
+    # ../tracking/README.md; not built yet). Without this, every call to generate()
     # would write to the same "resume.pdf"/"cover_letter.pdf", silently
     # overwriting whatever the previous posting produced. A missing "id" is a
     # malformed job_posting -- let the KeyError propagate rather than papering
@@ -161,7 +164,9 @@ async def generate(
 
     # generate resume
     response, error = await _call_llm(
-        "resume", build_resume_prompt(writing_facts, job_posting), RESUME_JSON_SCHEMA
+        "resume",
+        build_resume_prompt(writing_facts, job_posting, profile["summary"]),
+        RESUME_JSON_SCHEMA,
     )
     if error:
         result.resume = WriteResult(path=None, error=error)
@@ -181,7 +186,7 @@ async def generate(
     response, error = await _call_llm(
         "cover letter",
         build_cover_letter_prompt(writing_facts, job_posting, gaps_to_raise),
-        cover_letter_schema(bool(gaps_to_raise)),
+        cover_letter_schema(stack_gap_allowed=any(d.requirements for d in gaps_to_raise)),
     )
     if error:
         result.cover_letter = WriteResult(path=None, error=error)
@@ -191,7 +196,11 @@ async def generate(
             response,
             personal,
             output_path=cover_letter_path,
-            gaps_expected=bool(gaps_to_raise),
+            # each applicable gap's own text, word for word; the model's
+            # stack_gap sentence goes right after the gap that quoted the
+            # posting's years requirement
+            gap_texts=[(d.text, bool(d.requirements)) for d in gaps_to_raise],
+            role=job_posting.get("title"),
             company=job_posting.get("company"),
         )
     except (PlaywrightError, PyPdfError):

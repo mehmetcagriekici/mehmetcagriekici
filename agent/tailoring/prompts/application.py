@@ -18,7 +18,7 @@ def build_application_prompt(facts: list[dict], job_posting: dict, questions: li
     # built from the real field_ids, so there are no placeholder keys in the
     # prompt for the model to copy (the 2026-08-05 run returned "field_id_1")
     example = (
-        json.dumps({q["field_id"]: "answer text" for q in questions})
+        json.dumps({str(q["field_id"]): "answer text" for q in questions})
         # field ids come from the ATS form: same tag escaping as format_posting
         .replace("<", "\\u003c")
         .replace(">", "\\u003e")

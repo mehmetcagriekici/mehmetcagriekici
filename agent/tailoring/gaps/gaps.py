@@ -18,13 +18,16 @@ class GapDecision:
     applies: bool
     # which rule fired and on what text -- for the review email / review_gate/
     reason: str
-    # the gap's fact and the phrasing to hand the LLM (a gap with situational
-    # phrasings, like visa sponsorship, has the matching one selected here)
     fact: str
-    phrasing: str | None = None
-    # posting requirements the paragraph must address verbatim, e.g. "3+ years
-    # building web applications with TypeScript" -- so the narrower,
-    # stack-specific gap gets named, not just the general one
+    # known-gaps.json's finished sentences for the letter -- inserted word for
+    # word by code, never rewritten by the model -- and its instructions about
+    # the gap, which never go into a letter (they were once one field, and the
+    # model copied an instruction straight into a cover letter)
+    text: str
+    guidance: str
+    # posting requirements quoted verbatim, e.g. "3+ years building web
+    # applications with TypeScript" -- the model writes one sentence naming the
+    # narrower, stack-specific gap for them
     requirements: list[str] = field(default_factory=list)
 
 
@@ -58,13 +61,19 @@ def _posting_text(job_posting: dict, without: tuple[str, ...] = ()) -> str:
 # sentences -- plus the requirements/nice_to_have lists the synthetic fixtures
 # carry. Scanning only requirements went silent on normalized postings, which
 # have no such list: a description's "3+ years ..." raised nothing.
-def _candidate_lines(job_posting: dict) -> list[str]:
+#
+# Returned as (line, from_requirements_list) -- a line from an explicit
+# requirements list is always quotable as a requirement; a description line
+# only when it reads like one (see _QUOTABLE). The title is read too:
+# "Backend Engineer (5+ years)" puts the requirement there.
+def _candidate_lines(job_posting: dict) -> list[tuple[str, bool]]:
     lines = []
     for key in ("requirements", "nice_to_have"):
-        lines += [line for line in job_posting.get(key) or [] if isinstance(line, str)]
-    for line in str(job_posting.get("description") or "").splitlines():
-        lines += re.split(r"(?<=[.!?])\s+", line)
-    return [_normalize(line.strip()) for line in lines if line.strip()]
+        lines += [(line, True) for line in job_posting.get(key) or [] if isinstance(line, str)]
+    for key in ("title", "description"):
+        for line in str(job_posting.get(key) or "").splitlines():
+            lines += [(sentence, False) for sentence in re.split(r"(?<=[.!?])\s+", line)]
+    return [(_normalize(line.strip()), listed) for line, listed in lines if line.strip()]
 
 
 def _first_match(pattern: re.Pattern, text: str) -> str | None:
@@ -77,7 +86,10 @@ def _first_match(pattern: re.Pattern, text: str) -> str | None:
 # ("3+ years of Go", "5 years building", "years' experience"), or a line that
 # also says "experience". "We are 12 years old" / "founded 10 years ago" don't
 # count -- they'd otherwise be quoted to the model as the posting's requirement.
-_YEARS = r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:\+|-\s*\d+)?\s*years?\b"
+_YEARS = (
+    r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:\+|-\s*\d+)?\s*"
+    r"(?:years?|yrs?)\b\.?"
+)
 _YEARS_REQUIREMENT = re.compile(
     _YEARS + r"'?\s*(?:of|in|with|experience|building|working|developing|designing|writing"
     r"|professional|hands-on|industry|commercial)\b",
@@ -90,6 +102,9 @@ def _is_years_requirement(line: str) -> bool:
     return bool(
         _YEARS_REQUIREMENT.search(line)
         or (_YEARS_ANY.search(line) and re.search(r"\bexperience\b", line, re.I))
+        # "5+ years" -- a plus sign marks a minimum on its own, e.g. in a title
+        # like "Backend Engineer (5+ years)"
+        or re.search(r"\b\d+\s*\+\s*(?:years?|yrs?)\b", line, re.I)
     )
 
 
@@ -98,10 +113,27 @@ _PROFESSIONAL_EXPERIENCE = re.compile(
 )
 
 
+# Raising and quoting are separate. Any years line raises the gap (the safe
+# direction, even for "Acme celebrates 25 years of innovation"), but only a
+# line that reads like a requirement *of the candidate* is quoted to the model
+# as "the posting's requirement" -- otherwise it may write a stack-gap
+# sentence about the company's history.
+_QUOTABLE = re.compile(
+    r"\+|\bat least\b|\bminimum\b|\bmin\.|\brequired\b|\brequire[sd]?\b|\bexperience\b"
+    r"|\byou\b|\byour\b|\bcandidates?\b|\bmust\b",
+    re.I,
+)
+
+
 def _no_professional_experience(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
-    years_lines = [line for line in _candidate_lines(job_posting) if _is_years_requirement(line)]
+    years_lines = [
+        (line, listed)
+        for line, listed in _candidate_lines(job_posting)
+        if _is_years_requirement(line)
+    ]
     if years_lines:
-        return True, f"posting asks for years of experience: {years_lines[0]!r}", years_lines
+        quoted = [line for line, listed in years_lines if listed or _QUOTABLE.search(line)]
+        return True, f"posting asks for years of experience: {years_lines[0][0]!r}", quoted
     phrase = _first_match(_PROFESSIONAL_EXPERIENCE, text)
     if phrase:
         return True, f"posting asks for {phrase!r}", []
@@ -109,12 +141,16 @@ def _no_professional_experience(job_posting: dict, text: str) -> tuple[bool, str
 
 
 _DEGREE = re.compile(
-    r"\b(?:degree|bachelor'?s?|master'?s|b\.?sc|m\.?sc|bs/ms|ba/bs|diploma|ph\.?\s?d)\b"
+    r"\b(?:degree|bachelor'?s?|master'?s|b\.?sc|m\.?sc|bs/ms|ba/bs|ph\.?\s?d)\b"
+    # "diploma", but not a high-school one
+    r"|(?<!high school )(?<!high-school )\bdiploma\b"
     # Short forms (BS, M.S., BA, MA) only in degree context -- followed by "in",
-    # "degree", "or", or a slash -- and case-sensitive, so lowercase "ms"/"ma"
-    # never match. (State codes like "Boston, MA" are kept out by not reading
-    # the location field at all, see _in_progress_degree.)
-    r"|(?-i:\b(?:B\.?S|M\.?S|B\.?A|M\.?A)\.?)(?=\s+(?:in|degree|or)\b|/)",
+    # "degree", a slash, or "or" plus another degree/"equivalent" ("BS or MS") --
+    # and case-sensitive, so lowercase "ms"/"ma" never match. State codes stay
+    # out: the location field isn't read at all (see _in_progress_degree), and
+    # "Boston, MA or remote" in a description doesn't fit the context.
+    r"|(?-i:\b(?:B\.?S|M\.?S|B\.?A|M\.?A)\.?)"
+    r"(?=\s+(?:in|degree)\b|/|\s+or\s+(?:(?-i:B\.?S|M\.?S|B\.?A|M\.?A)\b|equivalent|higher))",
     re.I,
 )
 
@@ -140,6 +176,12 @@ def _gpa(job_posting: dict, text: str) -> tuple[bool, str, list[str]]:
 
 _TURKEY = re.compile(r"\b(?:turkey|türkiye|turkiye|ankara|istanbul|i̇stanbul|izmir)\b", re.I)
 _REMOTE = re.compile(r"\bremote\b", re.I)
+# office attendance stated anywhere in the posting text
+_OFFICE_ATTENDANCE = re.compile(
+    r"\bhybrid\b|\bon-?site\b|\bin[- ]office\b|\bdays? (?:a|per) week (?:in|at)\b"
+    r"|\b(?:in|at|from) (?:the|our) (?:\w+ )?office\b",
+    re.I,
+)
 _NOT_FULLY_REMOTE = re.compile(
     r"\bno remote\b|\bnot remote\b|\bnon-remote\b|\bon-?site\b|\bhybrid\b|"
     r"\bin[- ]office\b|\boffice-based\b|\bfield-based\b",
@@ -207,16 +249,26 @@ def _visa_sponsorship_needed(job_posting: dict, text: str) -> tuple[bool, str, l
     location = str(job_posting.get("location") or "").strip()
     mode = _workplace_mode(job_posting)
 
-    # Turkey exempts the gap only when it's the sole location -- "Istanbul or
-    # Berlin" may well mean Berlin
-    if _TURKEY.search(location) and not re.search(r"\bor\b|/|;|\|", location):
-        return False, f"role is located in Turkey: {location!r}", []
+    # Turkey exempts the gap when it's the sole location, or when the only other
+    # option is remote ("Istanbul or Remote" -- doable from Turkey either way).
+    # "Istanbul or Berlin" may well mean Berlin, so it falls through.
+    if _TURKEY.search(location):
+        if not re.search(r"\bor\b|/|;|\|", location):
+            return False, f"role is located in Turkey: {location!r}", []
+        rest = _REMOTE.sub(" ", _TURKEY.sub(" ", location))
+        if not re.search(r"[^\W\d_]{2,}", re.sub(r"\b(?:or|and)\b", " ", rest, flags=re.I)):
+            return False, f"role is in Turkey or remote: {location!r}", []
 
     if mode in ("hybrid", "onsite"):
         return True, f"workplace type is {mode}: {location!r}", []
     if _NOT_FULLY_REMOTE.search(location):
         return True, f"not a fully remote role: {location!r}", []
     remote_in_location = _REMOTE.search(location)
+    # The location may say "Remote" while the description says otherwise --
+    # Greenhouse gives no workplace_type, so location text is all the rule had.
+    office = _first_match(_OFFICE_ATTENDANCE, _posting_text(job_posting, without=("location",)))
+    if office:
+        return True, f"posting mentions {office!r}", []
     if mode != "remote" and not remote_in_location:
         # no remote signal at all (or no usable location) -- ambiguity
         # resolves toward raising the gap
@@ -253,17 +305,6 @@ _RULES = {
 }
 
 
-def _select_phrasing(gap: dict) -> str:
-    phrasing = gap["phrasing"]
-    if isinstance(phrasing, str):
-        return phrasing
-    # situational phrasings: only visa sponsorship has them today, and it only
-    # applies in the on-site/relocation situation (fully remote -> not raised)
-    if gap["gap"] == "visa_sponsorship_needed":
-        return phrasing["onsite_or_relocation"]
-    raise ValueError(f"gap {gap['gap']!r} has situational phrasings but no rule to pick one")
-
-
 def decide_gaps(job_posting: dict, known_gaps: list[dict]) -> list[GapDecision]:
     text = _posting_text(job_posting)
     decisions = []
@@ -280,7 +321,8 @@ def decide_gaps(job_posting: dict, known_gaps: list[dict]) -> list[GapDecision]:
                 applies=applies,
                 reason=reason,
                 fact=gap["fact"],
-                phrasing=_select_phrasing(gap) if applies else None,
+                text=gap["text"],
+                guidance=gap["guidance"],
                 requirements=requirements,
             )
         )

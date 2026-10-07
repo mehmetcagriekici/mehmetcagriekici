@@ -11,9 +11,9 @@
     {{ icon('pin') }}{{ personal.location }}
   </div>
   <div class="contact-line">
-    {{ icon('link') }}<a href="{{ personal.github }}">{{ personal.github | replace('https://', '') }}</a>
+    {{ icon('link') }}<a href="{{ personal.github | ensure_scheme }}">{{ personal.github | replace('https://', '') }}</a>
     <span class="sep">&middot;</span>
-    {{ icon('link') }}<a href="{{ personal.linkedin }}">{{ personal.linkedin | replace('https://', '') }}</a>
+    {{ icon('link') }}<a href="{{ personal.linkedin | ensure_scheme }}">{{ personal.linkedin | replace('https://', '') }}</a>
   </div>
 </div>
 {% endmacro %}

@@ -4,28 +4,29 @@
       "gap": "no_professional_experience",
       "status": "established",
       "fact": "Zero paid/professional work experience — first job seeker. All practical evidence is self-directed and hackathon projects, building consistently since July 2025 (~1 year as of mid-2026).",
-      "phrasing": "I have none — everything described above is self-directed work since July 2025. State the real duration directly (~1 year), never implied as equivalent to professional years. When a posting asks for years of depth in one specific language/stack, name that narrower gap too rather than only the general one — e.g. \"my TypeScript/Node.js work specifically is one project, not years of depth; most of my hands-on time has been in Python and Go.\""
+      "text": "I don't have professional experience yet: everything described above is self-directed work I've been doing since July 2025.",
+      "guidance": "Raised when the posting asks for years of experience or professional experience. Never present the self-directed time as equivalent to professional years. When the posting asks for years in one specific language or stack, add one sentence naming that narrower gap from the facts — e.g. \"My TypeScript/Node.js work specifically is one project, not years of depth; most of my hands-on time has been in Python and Go.\""
     },
     {
       "gap": "in_progress_degree",
       "status": "established",
       "fact": "First-year student, Management Information Systems, Ankara University Open Education Faculty (Açıköğretim/distance learning). Transcript only, no diploma yet. Expected completion 2029. No CS or Engineering degree, no other degrees.",
-      "phrasing": "I don't hold a Bachelor's in CS or Engineering. I'm a first-year student in Management Information Systems at Turkey's Open Education Faculty, expected 2029."
+      "text": "I don't hold a Bachelor's degree in Computer Science or Engineering. I'm currently studying Management Information Systems at Ankara University's Open Education Faculty, with expected completion in 2029.",
+      "guidance": "Raised only when the posting asks for a degree."
     },
     {
       "gap": "gpa",
       "status": "established",
       "fact": "GPA 2.6/4.0, first year completed, Ankara University Open Education Faculty. Confirmed 2026-07-22, stable for the next several months.",
-      "phrasing": "Don't volunteer the number unprompted. If a posting explicitly asks for GPA, state it plainly: \"My GPA so far is 2.6/4.0.\" No hedging, no rounding, no omitting."
+      "text": "My GPA so far is 2.6/4.0.",
+      "guidance": "Raised only when the posting explicitly asks for GPA — never volunteered. State it plainly: no hedging, no rounding, no omitting."
     },
     {
       "gap": "visa_sponsorship_needed",
       "status": "established",
       "fact": "Turkish citizenship only. Remote roles worked from Turkey need no visa/work-permit sponsorship. On-site or relocation roles in an EU/EEA, UK, US, or other non-Turkish jurisdiction need sponsorship. Open to relocation (with sponsorship). Mirrors the conditional `visa_sponsorship_needed` field in `profile.json`'s `job_preferences`.",
-      "phrasing": {
-        "remote": "Not a gap to raise for remote roles — working remotely from Turkey requires no visa or work-permit sponsorship.",
-        "onsite_or_relocation": "I'm based in Ankara, Turkey, and would need visa/work-permit sponsorship for this role — naming that directly rather than letting it surface later in the process."
-      }
+      "text": "I'm based in Ankara, Turkey, and would need visa and work-permit sponsorship for this role.",
+      "guidance": "Raised for on-site, hybrid, relocation, or region-restricted remote roles (decided in code, tailoring/gaps/). Never raised for a fully remote role worked from Turkey — no sponsorship is needed there."
     }
   ]
 }

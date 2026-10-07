@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
@@ -139,7 +140,8 @@ _ApplicationAnswers = TypeAdapter(dict[str, str])
 # would enforce it by cutting the answer off mid-sentence, silently -- it needs
 # a real check after generation instead.
 def application_answers_schema(questions: list[dict]) -> dict:
-    field_ids = [q["field_id"] for q in questions]
+    # as strings: JSON object keys always are, so an integer id would never match
+    field_ids = [str(q["field_id"]) for q in questions]
     return {
         "type": "object",
         "properties": {field_id: {"type": "string"} for field_id in field_ids},
@@ -159,6 +161,16 @@ _env = Environment(
     loader=FileSystemLoader(_TEMPLATES_DIR),
     autoescape=select_autoescape(["html"]),
 )
+
+
+# Links in profile data may lack a scheme ("boot.dev/u/..."); in an href that's
+# a relative link, which goes nowhere in a PDF. Every template href goes
+# through this, so the data doesn't have to be perfect.
+def _ensure_scheme(url: str) -> str:
+    return url if re.match(r"^[a-z][a-z0-9+.-]*:", url, re.I) else f"https://{url}"
+
+
+_env.filters["ensure_scheme"] = _ensure_scheme
 
 
 # Mirrors RESUME_SCHEMA in prompts/resume.py — validates the LLM's JSON
@@ -189,20 +201,31 @@ class Resume(BaseModel):
 
 
 # Mirrors COVER_LETTER_SCHEMA in prompts/cover_letter.py.
-# Field order is generation order: Ollama's constrained decoding writes the
-# JSON fields in schema order, so the gaps paragraph comes before the closing
-# (with closing first, a 2026-09-30 run spilled gap content into the closing
-# before the gaps paragraph existed).
-class CoverLetter(BaseModel):
-    opening: RequiredText
+# What the model writes for a cover letter: only the parts that need judgment
+# about this posting. Everything fixed is written by code (write_cover_letter):
+# the opening sentence naming the role and company, the gaps paragraph (the
+# user's own known-gaps.json `text`, word for word), and the closing. Left to
+# the model, those slots drew genre filler ("I am excited to apply...") and,
+# once, an instruction from the gaps file copied into a letter. Field order is
+# generation order under Ollama's constrained decoding.
+class CoverLetterDraft(BaseModel):
+    # 1-2 sentences continuing the code-written opening: why this role,
+    # linking a specific fact to a specific requirement
+    why: RequiredText
     experience: RequiredText
-    # Present exactly when at least one known gap applies to the posting --
-    # decided in code before the LLM runs (../gaps/gaps.py), since a gap is
-    # raised only when the posting asks for what it's missing. The per-call
-    # schema (cover_letter_schema) requires or removes it accordingly, and
-    # write_cover_letter() rejects a letter that doesn't match.
-    gaps: OptionalText = None
-    closing: RequiredText
+    # one sentence naming a narrower, stack-specific experience gap for the
+    # posting's quoted requirement -- only allowed (in the schema) when one
+    # was quoted, and optional even then
+    stack_gap: OptionalText = None
+
+
+# The letter as sent -- assembled from code-written parts and the draft. Kept
+# as WriteResult.content, so the review email and tracking/ get the full text.
+class CoverLetter(BaseModel):
+    opening: str
+    experience: str
+    gaps: str | None = None
+    closing: str
 
 
 # JSON schemas for Ollama structured outputs (llm/client.py's response_schema):
@@ -211,17 +234,28 @@ class CoverLetter(BaseModel):
 RESUME_JSON_SCHEMA = Resume.model_json_schema()
 
 
-# The cover letter schema is built per call: with gaps to raise, "gaps" is a
-# required string; with none, it's removed entirely, so the model has no field
-# to put an unasked-for gap in.
-def cover_letter_schema(gaps_expected: bool) -> dict:
-    schema = copy.deepcopy(CoverLetter.model_json_schema())
-    if gaps_expected:
-        schema["properties"]["gaps"] = {"title": "Gaps", "type": "string"}
-        schema["required"] = ["opening", "experience", "gaps", "closing"]
-    else:
-        del schema["properties"]["gaps"]
+# The cover letter draft's schema, built per call: stack_gap exists only when
+# the posting quoted a years requirement for it to address -- otherwise the
+# model has no field to put a gap in at all.
+def cover_letter_schema(stack_gap_allowed: bool) -> dict:
+    schema = copy.deepcopy(CoverLetterDraft.model_json_schema())
+    if not stack_gap_allowed:
+        del schema["properties"]["stack_gap"]
     return schema
+
+
+# The one sentence of the opening that code writes; the model's `why` follows.
+def opening_sentence(role: str | None, company: str | None) -> str:
+    if role and company:
+        return f"I'm applying for the {role} role at {company}."
+    if role:
+        return f"I'm applying for the {role} role."
+    if company:
+        return f"I'm applying for the open role at {company}."
+    return "I'm applying for this role."
+
+
+CLOSING = "Thank you for considering my application."
 
 
 def _today() -> str:
@@ -340,7 +374,7 @@ def parse_application_answers(llm_response: str, questions: list[dict]) -> Parse
 
     # The structured-output schema already forces exactly these keys; this
     # guards against a model/Ollama version that doesn't honor it.
-    expected = {q["field_id"] for q in questions}
+    expected = {str(q["field_id"]) for q in questions}
     if set(answers) != expected:
         logger.warning(
             "parse_application_answers: field_id mismatch, missing=%s unexpected=%s",
@@ -351,7 +385,7 @@ def parse_application_answers(llm_response: str, questions: list[dict]) -> Parse
 
     flagged: dict[str, WriteError] = {}
     for question in questions:
-        field_id = question["field_id"]
+        field_id = str(question["field_id"])
         answer = answers[field_id]
         max_length = question.get("max_length")
         if _is_placeholder(answer):
@@ -376,16 +410,19 @@ async def write_cover_letter(
     llm_response: str,
     personal: dict,
     output_path: str,
-    gaps_expected: bool,
+    gap_texts: list[tuple[str, bool]],
+    role: str | None = None,
     company: str | None = None,
 ) -> WriteResult:
-    """llm_response: the cover letter call's raw JSON string (COVER_LETTER_SCHEMA, see
-    prompts/cover_letter.py).
+    """llm_response: the cover letter call's raw JSON string (a CoverLetterDraft,
+    see prompts/cover_letter.py).
     personal: profile.json's "personal" block (name/email/phone/location/github/linkedin).
-    gaps_expected: whether any known gap applies to this posting (gaps.decide_gaps) --
-    the letter must have a gaps paragraph exactly when one does."""
+    gap_texts: for each known gap that applies to this posting, in order, its
+    known-gaps.json `text` and whether the model's stack_gap sentence belongs
+    right after it (the gap that quoted the posting's years requirement).
+    role, company: the posting's title and company, for the opening sentence."""
     try:
-        letter = CoverLetter.model_validate(json.loads(llm_response))
+        draft = CoverLetterDraft.model_validate(json.loads(llm_response))
     except json.JSONDecodeError as e:
         logger.warning("write_cover_letter: invalid JSON: %s", e)
         return WriteResult(path=None, error=WriteError.INVALID_JSON)
@@ -393,15 +430,24 @@ async def write_cover_letter(
         logger.warning("write_cover_letter: schema validation failed: %s", e)
         return WriteResult(path=None, error=WriteError.VALIDATION_ERROR)
 
-    # The per-call schema already enforces this; checked again so a model that
-    # ignores the schema can't drop a gap that applies, or raise one nobody asked about.
-    if gaps_expected != (letter.gaps is not None):
-        logger.warning(
-            "write_cover_letter: gaps paragraph %s, expected %s",
-            "present" if letter.gaps is not None else "missing",
-            "one" if gaps_expected else "none",
-        )
+    # The per-call schema already forbids this; checked again so a model that
+    # ignores the schema can't add a gap sentence nobody asked for.
+    stack_gap_allowed = any(wants for _, wants in gap_texts)
+    if draft.stack_gap is not None and not stack_gap_allowed:
+        logger.warning("write_cover_letter: stack_gap present but no requirement was quoted")
         return WriteResult(path=None, error=WriteError.VALIDATION_ERROR)
+
+    gap_sentences = []
+    for text, wants_stack_gap in gap_texts:
+        gap_sentences.append(text)
+        if wants_stack_gap and draft.stack_gap is not None:
+            gap_sentences.append(draft.stack_gap)
+    letter = CoverLetter(
+        opening=f"{opening_sentence(role, company)} {draft.why}",
+        experience=draft.experience,
+        gaps=" ".join(gap_sentences) or None,
+        closing=CLOSING,
+    )
 
     template = _env.get_template("cover_letter.html")
     html_content = template.render(

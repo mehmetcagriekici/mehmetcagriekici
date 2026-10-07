@@ -36,10 +36,9 @@ NUM_PREDICT = 2048
 NUM_CTX = 16384
 
 # Seconds before the Python side gives up on a call. Deliberately generous
-# (slow is accepted for this pipeline): the 7B already took ~9 min per cover
-# letter with the 16k context, the 14B is roughly twice as slow, and time spent
-# waiting in Ollama's single-slot queue behind other calls counts against this
-# too.
+# (slow is accepted for this pipeline: the 14B takes ~17-23 min per call). The
+# clock starts only once the call holds the one-call-at-a-time slot (see
+# _ollama_slot below), so waiting behind other calls doesn't count against it.
 TIMEOUT_SECONDS = 3600
 
 # Ollama never errors on an oversized prompt -- it silently drops the start

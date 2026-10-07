@@ -31,7 +31,7 @@
 <p class="project-desc">{{ project.description }}</p>
 <ul>
   {% for bullet in project.bullets %}
-  <li>{{ bullet }}{% if loop.last and project.repo %} &mdash; {{ m.icon('link') }}<a href="{{ project.repo }}">repo</a>{% endif %}</li>
+  <li>{{ bullet }}{% if loop.last and project.repo %} &mdash; {{ m.icon('link') }}<a href="{{ project.repo | ensure_scheme }}">repo</a>{% endif %}</li>
   {% endfor %}
 </ul>
 {% endfor %}
@@ -43,7 +43,7 @@
   <span class="cert-name">{{ cert.name }}</span>
   <span class="cert-dates">{{ cert.dates }}</span>
 </div>
-<p>{{ cert.details }}{% if cert.verification_url %} Verify at <a href="{{ cert.verification_url }}">{{ cert.verification_url }}</a>.{% endif %}</p>
+<p>{{ cert.details }}{% if cert.verification_url %} Verify at <a href="{{ cert.verification_url | ensure_scheme }}">{{ cert.verification_url }}</a>.{% endif %}</p>
 {% endfor %}
 {% endif %}
 </body>

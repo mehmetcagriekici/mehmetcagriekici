@@ -9,7 +9,7 @@ dependencies = [
     "nltk",
     "sentence-transformers",
     # also used by tailoring — write/write.py: validates each LLM call's
-    # parsed JSON against RESUME_SCHEMA/COVER_LETTER_SCHEMA before rendering
+    # parsed JSON against its pydantic models (Resume, CoverLetterDraft) before rendering
     "pydantic",
 
     # sourcing — not yet implemented
