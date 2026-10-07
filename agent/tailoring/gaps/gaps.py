@@ -88,7 +88,8 @@ def _first_match(pattern: re.Pattern, text: str) -> str | None:
 # count -- they'd otherwise be quoted to the model as the posting's requirement.
 _YEARS = (
     r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:\+|-\s*\d+)?\s*"
-    r"(?:years?|yrs?)\b\.?"
+    # months count too: "Minimum 18 months of experience with Go"
+    r"(?:years?|yrs?|months?)\b\.?"
 )
 _YEARS_REQUIREMENT = re.compile(
     _YEARS + r"'?\s*(?:of|in|with|experience|building|working|developing|designing|writing"
@@ -104,7 +105,7 @@ def _is_years_requirement(line: str) -> bool:
         or (_YEARS_ANY.search(line) and re.search(r"\bexperience\b", line, re.I))
         # "5+ years" -- a plus sign marks a minimum on its own, e.g. in a title
         # like "Backend Engineer (5+ years)"
-        or re.search(r"\b\d+\s*\+\s*(?:years?|yrs?)\b", line, re.I)
+        or re.search(r"\b\d+\s*\+\s*(?:years?|yrs?|months?)\b", line, re.I)
     )
 
 
@@ -182,6 +183,10 @@ _OFFICE_ATTENDANCE = re.compile(
     r"|\b(?:in|at|from) (?:the|our) (?:\w+ )?office\b",
     re.I,
 )
+# the office named in an attendance phrase: "at our Berlin office"
+_OFFICE_PLACE = re.compile(
+    r"\b(?i:in|at|from)\s+(?i:the|our)\s+(?P<place>[A-Z][\w-]*)\s+(?i:office)\b"
+)
 _NOT_FULLY_REMOTE = re.compile(
     r"\bno remote\b|\bnot remote\b|\bnon-remote\b|\bon-?site\b|\bhybrid\b|"
     r"\bin[- ]office\b|\boffice-based\b|\bfield-based\b",
@@ -252,6 +257,20 @@ def _visa_sponsorship_needed(job_posting: dict, text: str) -> tuple[bool, str, l
     # Turkey exempts the gap when it's the sole location, or when the only other
     # option is remote ("Istanbul or Remote" -- doable from Turkey either way).
     # "Istanbul or Berlin" may well mean Berlin, so it falls through.
+    # Not when the posting names an office outside Turkey, though: location
+    # "Istanbul, Turkey" with "on-site at our Berlin office" means Berlin
+    # (an Istanbul office stays exempt).
+    text_without_location = _posting_text(job_posting, without=("location",))
+    foreign_office = next(
+        (
+            m.group("place")
+            for m in _OFFICE_PLACE.finditer(text_without_location)
+            if not _TURKEY.search(m.group("place"))
+        ),
+        None,
+    )
+    if foreign_office:
+        return True, f"posting names an office outside Turkey: {foreign_office!r}", []
     if _TURKEY.search(location):
         if not re.search(r"\bor\b|/|;|\|", location):
             return False, f"role is located in Turkey: {location!r}", []

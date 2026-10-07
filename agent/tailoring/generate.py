@@ -1,5 +1,6 @@
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -8,7 +9,13 @@ from pypdf.errors import PyPdfError
 
 from matching.matcher.matcher import is_fit_fact
 from tailoring.gaps.gaps import GapDecision, decide_gaps
-from tailoring.llm.client import OllamaError, OutputTooLongError, PromptTooLongError, llm_ollama
+from tailoring.llm.client import (
+    OllamaError,
+    OutputTooLongError,
+    PromptTooLongError,
+    llm_ollama,
+    prompt_fits,
+)
 from tailoring.prompts.application import build_application_prompt
 from tailoring.prompts.cover_letter import build_cover_letter_prompt
 from tailoring.prompts.resume import build_resume_prompt
@@ -88,6 +95,23 @@ def filename_stem(posting_id: object) -> str:
     )
 
 
+# Drops the lowest-ranked facts (facts arrive best first, as matching ranks
+# them) until the prompt fits the context budget. Without this, a posting that
+# matches most of the candidate's projects -- a top-ranked one -- produced a
+# prompt over budget, failed as PROMPT_TOO_LONG, and was excluded for good: the
+# project facts alone are ~43k characters. PROMPT_TOO_LONG can still happen,
+# but only when the posting itself doesn't fit even with no facts -- a property
+# of that posting.
+def fit_facts(build_prompt: Callable[[list[dict]], str], facts: list[dict]) -> list[dict]:
+    kept = list(facts)
+    while kept and not prompt_fits(SYSTEM_PROMPT, build_prompt(kept)):
+        kept.pop()
+    if len(kept) < len(facts):
+        dropped = [f["doc_id"] for f in facts[len(kept) :]]
+        logger.warning("generate: dropped lowest-ranked facts to fit the prompt: %s", dropped)
+    return kept
+
+
 # One LLM call, with every failure llm_ollama() can raise mapped to its
 # WriteError -- explicitly, by type. Returns (response, None) or (None, error).
 async def _call_llm(step: str, prompt: str, schema: dict) -> tuple[str | None, WriteError | None]:
@@ -165,7 +189,14 @@ async def generate(
     # generate resume
     response, error = await _call_llm(
         "resume",
-        build_resume_prompt(writing_facts, job_posting, profile["summary"]),
+        build_resume_prompt(
+            fit_facts(
+                lambda fs: build_resume_prompt(fs, job_posting, profile["summary"]),
+                writing_facts,
+            ),
+            job_posting,
+            profile["summary"],
+        ),
         RESUME_JSON_SCHEMA,
     )
     if error:
@@ -185,7 +216,14 @@ async def generate(
     # generate cover letter
     response, error = await _call_llm(
         "cover letter",
-        build_cover_letter_prompt(writing_facts, job_posting, gaps_to_raise),
+        build_cover_letter_prompt(
+            fit_facts(
+                lambda fs: build_cover_letter_prompt(fs, job_posting, gaps_to_raise),
+                writing_facts,
+            ),
+            job_posting,
+            gaps_to_raise,
+        ),
         cover_letter_schema(stack_gap_allowed=any(d.requirements for d in gaps_to_raise)),
     )
     if error:
@@ -218,7 +256,11 @@ async def generate(
         return result
     response, error = await _call_llm(
         "application",
-        build_application_prompt(facts, job_posting, questions),
+        build_application_prompt(
+            fit_facts(lambda fs: build_application_prompt(fs, job_posting, questions), facts),
+            job_posting,
+            questions,
+        ),
         application_answers_schema(questions),
     )
     if error:

@@ -94,6 +94,13 @@ def _ollama_slot() -> asyncio.Semaphore:
     return _slots[loop]
 
 
+# Whether a prompt fits the context budget, by the same conservative estimate
+# llm_ollama() enforces -- so callers can shrink a prompt before sending it.
+def prompt_fits(system_prompt: str, user_prompt: str) -> bool:
+    prompt_chars = len(system_prompt) + len(user_prompt)
+    return prompt_chars / MIN_CHARS_PER_TOKEN <= NUM_CTX - NUM_PREDICT
+
+
 # async function to get llm response from ollama.
 # response_schema: JSON schema the output is constrained to (Ollama structured
 # outputs) -- every call in this pipeline expects JSON, so it's required rather
@@ -106,12 +113,10 @@ async def llm_ollama(
     model: str = DEFAULT_MODEL,
     temperature: float = 0.2,
 ) -> str:
-    prompt_chars = len(system_prompt) + len(user_prompt)
-    max_prompt_tokens = NUM_CTX - NUM_PREDICT
-    if prompt_chars / MIN_CHARS_PER_TOKEN > max_prompt_tokens:
+    if not prompt_fits(system_prompt, user_prompt):
         raise PromptTooLongError(
-            f"prompt is {prompt_chars} characters, which may exceed the "
-            f"{max_prompt_tokens}-token prompt budget "
+            f"prompt is {len(system_prompt) + len(user_prompt)} characters, which may "
+            f"exceed the {NUM_CTX - NUM_PREDICT}-token prompt budget "
             f"(num_ctx={NUM_CTX} - num_predict={NUM_PREDICT})"
         )
 
