@@ -24,7 +24,7 @@ Kept separate from the manual cover-letter/resume workflow at the repo root (`..
 
 - **Hybrid Search** (`matching/`) — deterministic fit-scoring, no LLM.
 - **Application Generator** (`tailoring/`) — takes matched postings in rank order (most facts above the matching threshold first) until the run's cap is reached; generates the resume, cover letter, and free-text answers.
-- **Application Controller** (`review_gate/`) — a second LLM checks the Generator's output for honesty (traceable to `source_of_truth/`) and relevance (addresses the posting); any failure on either routes to human review.
+- **Application Controller** (`review_gate/`) — a code check (no invented names) and then a second LLM check the Generator's output for honesty (traceable to `source_of_truth/`) and relevance (addresses the posting); any failure on either routes to human review.
 - **Application API** (`form_automation/`, bridged through the Go orchestrator) — submits, firing only once the Controller or the user approves.
 
 A duplicate check against `tracking/` runs right after sourcing, before matching, so a posting already applied to — or permanently excluded after a failure or rejection — never burns a match/generate cycle.
@@ -44,7 +44,7 @@ Runs on a local k8s distro (k3s/minikube-style) on the user's own machine. The G
 5. **Generate, top down.** `tailoring/` generates for the highest-ranked posting, `review_gate/` checks it, then it's submitted or routed to the user's review. Repeat until the **submitted-application cap** (reviews don't count until approved and submitted) or the run-duration is reached.
 6. **What happens to each posting:**
    - **Submitted** → a full application record in `tracking/` (with the generated text).
-   - **Content failure** (bad model output for this posting, a prompt or output too long, a Controller rejection, the user's rejection) → a permanent exclusion record in `tracking/`; it never comes back.
+   - **Content failure** (bad model output for this posting, a prompt or output too long) or **the user's explicit reject** → a permanent exclusion record in `tracking/`; it never comes back. A failed Controller check never excludes by itself — it routes to the user's review.
    - **Infrastructure failure** (Ollama down or timing out, Chromium crashing) → no record, and **the run stops**; the posting comes back next run. See `tailoring/write/README.md` for which error is which.
    - **Review unanswered at run end** (Controller review or one-page overflow) → not submitted, no record; it comes back next run with a fresh email.
    - **Matched but not reached** → no record; re-ranked next run.

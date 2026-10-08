@@ -5,7 +5,9 @@ Open findings from the external reviews of 2026-10-07, checked against HEAD (`3a
 ## FIX NOW
 Can cause irreversible harm: a posting permanently excluded by mistake, a wrong or misleading application submitted, or every future run blocked.
 
-(none open — the three items from 2026-10-07 are fixed, each with a test: the prompt-length guard no longer excludes the best matches, since `generate()` trims the lowest-ranked facts to fit (`tests/test_generate.py`); a named office outside Turkey overrides the Turkey exemption (`istanbul-location-onsite-berlin`, with `istanbul-location-onsite-istanbul` guarding the other direction); experience requirements in months are recognized (`months-of-experience`).)
+- **The generator still invents technology for projects** — model-written `experience` paragraph (`tailoring/prompts/cover_letter.py`). 14B live run, 2026-10-07: BlightSanest given "React for its frontend", the Pub/sub CLI "a Node.js backend using Express" — neither fact mentions React, Node or Express. A misleading application once anything can be submitted; nothing can be yet (no `form_automation/`). Short fix: `review_gate/` (the Controller's honesty check) before any submission path exists.
+
+(Fixed: the three items from 2026-10-07 — each with a test: the prompt-length guard no longer excludes the best matches, since `generate()` trims the lowest-ranked facts to fit (`tests/test_generate.py`); a named office outside Turkey overrides the Turkey exemption (`istanbul-location-onsite-berlin`, with `istanbul-location-onsite-istanbul` guarding the other direction); experience requirements in months are recognized (`months-of-experience`).
 
 ## BEFORE SOURCING
 Will matter once real postings flow, but causes no irreversible harm by itself.
