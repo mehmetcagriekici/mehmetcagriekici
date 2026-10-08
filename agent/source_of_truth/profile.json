@@ -12,9 +12,9 @@
 
   "skills": {
     "languages": ["Go", "Python", "TypeScript"],
-    "backend": ["gRPC", "FastAPI", "Express", "RabbitMQ (pub/sub)", "PostgreSQL (pgvector)", "Redis", "ChromaDB"],
+    "backend": ["FastAPI", "Express", "RabbitMQ (pub/sub)", "PostgreSQL", "Redis", "ChromaDB"],
     "ai_ml": ["RAG pipelines", "hybrid search (BM25 + semantic, RRF)", "Sentence Transformers", "CLIP", "LLM integration (Gemini, Ollama, AWS Bedrock)"],
-    "devops": ["Docker", "GitHub Actions (CI/CD)", "AWS (S3, Aurora, EKS, Cognito)"]
+    "devops": ["Docker", "GitHub Actions (CI/CD)", "AWS (S3, Bedrock)"]
   },
 
   "projects": [
@@ -22,14 +22,14 @@
       "name": "BlightSanest — Stable Insights",
       "status": "in development",
       "dates": "May 2026 – Present",
-      "stack": ["Go", "Python", "gRPC", "PostgreSQL/pgvector", "Redis", "S3", "MessagePack", "Docker", "AWS"],
+      "stack": ["Go", "Python", "gRPC", "PostgreSQL", "Redis", "S3", "MessagePack", "Docker", "AWS"],
       "description": "Privacy-first, domain-agnostic smart journaling platform unifying two earlier prototypes (a pub/sub crypto CLI and a health-specific RAG API): users store personal data across any domain and query it conversationally through RAG or directly through hybrid search.",
       "bullets": [
         "Unifies two earlier, working prototypes — a RabbitMQ pub/sub crypto-analysis CLI and a health-specific RAG API — into a single domain-agnostic platform, carrying forward each one's validated design decisions rather than starting over.",
-        "Designed a four-component architecture (Go API orchestrator, Python RAG service, Go pub/sub, PostgreSQL/pgvector) with per-user isolated indexes and no cross-user search as a hard constraint; gRPC is the planned inter-service protocol (documented, not yet implemented).",
+        "Designed a four-component architecture (Go API orchestrator, Python RAG service, Go pub/sub, PostgreSQL; pgvector deferred to v2) with per-user isolated indexes and no cross-user search as a hard constraint; gRPC is the planned inter-service protocol (documented, not yet implemented).",
         "Implemented hybrid retrieval (BM25 + semantic embeddings fused via Reciprocal Rank Fusion) with the LLM provider injected into the RAG class rather than selected internally, so Ollama (local dev) and AWS Bedrock (production) are interchangeable without touching RAG's own code.",
-        "Built a pre-computed indexing pipeline — S3 as source of truth, an optional non-fatal Redis hot cache, Alembic-migrated Postgres/pgvector schema — plus a standalone TypeConverter serialization layer (200+ tests) so MessagePack can round-trip Python types (Counter, sets, numpy arrays, Pydantic models) it has no native support for.",
-        "RAG and database phases complete; Go API service now in early bootstrap (HTTP server, typed config, structured logging) as of July 2026, with gRPC, pub/sub, and Kubernetes/CI-CD infrastructure not yet started."
+        "Built a pre-computed indexing pipeline — S3 as source of truth, an optional non-fatal Redis hot cache, an Alembic-migrated Postgres users/documents schema — plus a standalone TypeConverter serialization layer (25 tests, in a 140-test suite) so MessagePack can round-trip Python types (Counter, sets, numpy arrays, Pydantic models) it has no native support for.",
+        "RAG service largely built (open: real Bedrock test, gRPC server); users/documents schema done, pgvector deferred to v2; Go API service now in early bootstrap (HTTP server, typed config, structured logging) as of July 2026, with gRPC, pub/sub, and Kubernetes/CI-CD infrastructure not yet started."
       ],
       "repo": "https://github.com/mehmetcagriekici/blightsanest_stable_insights"
     },
@@ -68,9 +68,9 @@
       "description": "Semantic document-analysis API that detects patterns, redundancies, and similarities across uploaded documents (.txt, .md, .pdf). Originally a boot.dev first-personal-project CLI script, rewritten as a full FastAPI service (\"v2\") once persistence, multi-format input, and LLM generation were needed.",
       "bullets": [
         "Automatic clustering via vector embeddings, natural-language querying of similar content, and LLM-powered generation from selected clusters.",
-        "Deployed with a live public demo (Hugging Face Spaces); GitHub Actions builds/pushes a Docker image and runs tests on every push to main; multi-stage Docker build with CPU-only PyTorch.",
+        "Deployed with a live public demo (Hugging Face Spaces); GitHub Actions builds/pushes a Docker image and renders manifests on every push to main (the test workflow is wired to a since-deleted branch, so tests don't currently run in CI); multi-stage Docker build with CPU-only PyTorch.",
         "Rewrote the original single-script prototype as a FastAPI + ChromaDB service backed by persistent vector storage, with markdown/PDF processing and collection management added on top of the same core clustering logic.",
-        "Repo also includes AI-assisted Kubernetes manifests (Kustomize) wired into the CD pipeline (image substitution at render time) — experimental, not yet a skill I can speak to in depth; the CD pipeline builds/renders manifests but doesn't deploy to a live cluster."
+        "Repo also includes Kubernetes manifests (Kustomize) wired into the CD pipeline (image substitution at render time) — experimental, not yet a skill I can speak to in depth; the CD pipeline builds/renders manifests but doesn't deploy to a live cluster."
       ],
       "repo": "https://github.com/mehmetcagriekici/reargs"
     },
@@ -81,7 +81,7 @@
       "stack": ["Python", "Sentence Transformers (all-MiniLM-L6-v2)", "Gemini (2.5-flash)"],
       "description": "24-hour hackathon (HackerRank Orchestrate, May 2026). Terminal-based agent that triages real support tickets across three companies (HackerRank, Claude, Visa), grounding every answer in a local support-article corpus and escalating instead of guessing on fraud, billing, or out-of-corpus queries.",
       "bullets": [
-        "Built retrieval from scratch: Sentence Transformer embeddings for the entire support corpus (cached to disk, rebuilt only when the corpus changes), brute-force cosine similarity to pull the top-10 most relevant articles per ticket — no vector database.",
+        "Built retrieval from scratch: Sentence Transformer embeddings for the entire support corpus (cached to disk, rebuilt only when the corpus size changes), brute-force cosine similarity to pull the top-10 most relevant articles per ticket — no vector database.",
         "Prompt explicitly constrains the LLM to answer only from the retrieved corpus and to escalate rather than answer for fraud, billing/account-access, or anything the corpus doesn't cover.",
         "Fixed a live KeyError crash caused by a mismatched CSV column name in the actual ticket data by switching from strict dict indexing to defensive .get() lookups with fallbacks, and skip writing a row entirely when the LLM returns an empty response rather than emitting a broken record."
       ],
@@ -103,14 +103,14 @@
     {
       "name": "Pub/sub financial-analysis CLI",
       "status": "on hold (superseded by BlightSanest — Stable Insights)",
-      "dates": "Nov 2025 – Jun 2026",
+      "dates": "Nov 2025 – Feb 2026, revisited Jul 2026",
       "stack": ["Go", "RabbitMQ", "PostgreSQL", "Python (FastAPI, Sentence Transformers)", "Docker"],
       "description": "CLI tool for fetching and analyzing crypto financial assets (CoinGecko), built around a publisher/subscriber architecture so multiple independent terminal sessions can filter/rank the same fetched data without interfering with each other. Grew from basic crypto fetch/filter/rank commands into a BM25 keyword search engine plus a separate semantic-search microservice. The older of two BlightSanest-lineage projects — development moved to the newer, bigger BlightSanest — Stable Insights platform rather than continuing this one.",
       "bullets": [
         "Built a pub/sub architecture (RabbitMQ) separating a server that fetches/caches CoinGecko data from independent client REPL sessions, so multiple terminals can filter/rank the same data concurrently without shared mutable state.",
         "Added a BM25 keyword search engine (custom inverted index, TF-IDF) and a separate Python/FastAPI semantic-search microservice (Sentence Transformers) callable from the Go client, plus a PostgreSQL-backed persistence layer for saved lists.",
         "Found and fixed three separate crashes in the semantic search API by exercising the actual endpoints end-to-end rather than just deploying — an undeclared dependency, a pydantic-object indexing bug, and a JSON-unencodable numpy return type.",
-        "Repo also includes AI-assisted Kubernetes manifests (Kustomize) for local (minikube) deployment of the full stack — experimental, not yet a skill I can speak to in depth; Docker Compose is the primary way this project actually runs.",
+        "Repo also includes Kubernetes manifests (Kustomize) for local (minikube) deployment of the full stack — experimental, not yet a skill I can speak to in depth; Docker Compose is the primary way this project actually runs.",
         "Cut Docker image sizes substantially: Go services from 800MB+ (full toolchain) to ~68MB static binaries via a distroless multi-stage build, and the Python semantic-search image from 8.47GB to ~1.95GB by installing the CPU-only torch wheel (no GPU in the deployment target)."
       ],
       "repo": "https://github.com/mehmetcagriekici/blightsanest"
@@ -119,8 +119,8 @@
       "name": "MRI Read — local vision-LLM MRI analysis prototype",
       "status": "in development",
       "dates": "Jul 2026 – Present",
-      "stack": ["Python", "Ollama (qwen2.5vl, meditron)", "DICOM", "Docker", "pytest"],
-      "description": "Research/engineering prototype that reads MRI DICOM series and produces a non-diagnostic structured report, entirely on-device against a local Ollama server — no imaging data leaves the machine. A vision model reports per-sequence findings, a separate local medical-domain text model writes the synthesis, and a deterministic hallucination guard (no LLM) checks both before anything reaches the report.",
+      "stack": ["Python", "Ollama (qwen2.5vl, qwen2.5)", "DICOM", "Docker", "pytest"],
+      "description": "Research/engineering prototype that reads MRI DICOM series and produces a non-diagnostic structured report, entirely on-device against a local Ollama server — no imaging data leaves the machine. A vision model reports per-sequence findings, a separate local general-purpose text model (qwen2.5:14b by default; meditron optional) writes the synthesis, and a deterministic hallucination guard (no LLM) checks both before anything reaches the report.",
       "bullets": [
         "Built a two-model pipeline (vision model per sequence type, text model for synthesis) with a deterministic pre- and post-synthesis hallucination guard that redacts uncorroborated diagnostic-sounding claims rather than passing them through with a caveat.",
         "Diagnosed and fixed a CPU-inference stuck-generation failure where all five vision calls timed out simultaneously — root-caused to a missing output-token cap combined with Ollama's single-processing-slot queuing, not a slow-inference issue.",
@@ -135,7 +135,7 @@
     {
       "name": "Boot.dev Backend Developer Path — completed twice",
       "dates": "2025 – 2026",
-      "details": "Python/Go track (Dec 2025) and TypeScript track (Feb 2026): 30 courses and 12 guided projects covering distributed systems, HTTP servers/clients, pub/sub, RAG, Docker, Kubernetes, CI/CD, and cryptography. 2,723 lessons solved; top-250 leaderboard.",
+      "details": "Python/Go track (Dec 2025) and TypeScript track (Feb 2026): 30 courses and 12 guided projects covering distributed systems, HTTP servers/clients, pub/sub, RAG, Docker, Kubernetes, CI/CD, and cryptography. 2,000+ lessons solved; top-250 leaderboard.",
       "verification_url": "boot.dev/u/callsower"
     }
   ],

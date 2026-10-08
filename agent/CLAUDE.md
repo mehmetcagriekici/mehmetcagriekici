@@ -90,6 +90,12 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - The Controller never rejects or excludes on its own: every failed check (name check, unsupported sentence, relevance) routes to the user's review; only the user's explicit reject writes an exclusion. Supersedes "Controller rejection" as an exclusion trigger (2026-10-07).
 - Override list: a hand-maintained JSON file in `review_gate/` with entries matching on company (exact display name) and/or a title word, each with a note shown as the review reason; a match forces review even when every check passes. Never written by the pipeline.
 
+**2026-10-08 — source_of_truth accuracy pass** (external check against the eight project repos at HEAD)
+- Corrected drift in BlightSanest (pgvector deferred to v2, phase status, TypeConverter test count, roadmap markers, health predecessor), Reargs (tests don't run in CI), MRI Read (qwen2.5:14b synthesis default), pub/sub dates (Nov 2025 – Feb 2026, revisited Jul 2026) and the triage agent's rebuild rule.
+- Skills list only claims what's in code: gRPC dropped, `PostgreSQL (pgvector)` → `PostgreSQL`, AWS → `S3, Bedrock`. Lesson count → "2,000+" (two files disagreed).
+- "AI-assisted" labels removed: the user uses AI daily as a tool and owns all work in their repos equally. The "experimental, not a skill I can speak to in depth" qualifiers stay — they're about depth, not authorship.
+- Fixture margin dropped from 3 to 2 fit facts on both sides; threshold unchanged.
+
 ## Open questions
 
 - **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built; building it closes the FIX NOW item in `BACKLOG.md`.
