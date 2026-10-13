@@ -106,6 +106,11 @@ def fit_facts(build_prompt: Callable[[list[dict]], str], facts: list[dict]) -> l
     kept = list(facts)
     while kept and not prompt_fits(SYSTEM_PROMPT, build_prompt(kept)):
         kept.pop()
+    # Not even the best-ranked fact fits: return them all, so llm_ollama()'s
+    # length check fails the call as PROMPT_TOO_LONG -- rather than sending a
+    # prompt with no facts, which the model fills from the posting alone.
+    if facts and not kept:
+        return facts
     if len(kept) < len(facts):
         dropped = [f["doc_id"] for f in facts[len(kept) :]]
         logger.warning("generate: dropped lowest-ranked facts to fit the prompt: %s", dropped)
@@ -202,6 +207,8 @@ async def generate(
     if error:
         result.resume = WriteResult(path=None, error=error)
         return result
+    if response is None:
+        return result
     try:
         result.resume = await write_resume(response, personal, resume_path)
     except (PlaywrightError, PyPdfError):
@@ -229,6 +236,8 @@ async def generate(
     if error:
         result.cover_letter = WriteResult(path=None, error=error)
         return _discard_rendered(result)
+    if response is None:
+        return result
     try:
         result.cover_letter = await write_cover_letter(
             response,
@@ -266,6 +275,8 @@ async def generate(
     if error:
         result.application = ParseResult(answers=None, error=error)
         return _discard_rendered(result)
+    if response is None:
+        return result
     # parse_application_answers is sync -- no rendering, so no Playwright/pypdf
     # failure mode to catch here the way write_resume/write_cover_letter have.
     result.application = parse_application_answers(response, questions)

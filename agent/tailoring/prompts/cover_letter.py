@@ -7,16 +7,24 @@ from ._shared import escape_untrusted, format_facts, format_posting
 # posting. The opening sentence, the gaps paragraph (the user's known-gaps.json
 # `text`, word for word) and the closing are written by code -- see
 # write.py's CoverLetterDraft for why.
+#
+# The Nordbridge reruns (2026-10-07, 2026-10-13) drifted in the same places
+# each time: a sentence summing up the candidate's stack across projects (it
+# added the posting's React), "why" adopting the posting's work areas ("across
+# frontend and backend"), and stack_gap negating the posting's requirement
+# ("not ... for more than three years", implying some years). Project-by-project
+# sentences stayed faithful -- so "experience" is limited to those, and
+# stack_gap is told what to state instead of what to avoid.
 COVER_LETTER_SCHEMA = """{
-  "why": "1-2 sentences that continue the opening: why this role -- link one specific fact to one specific requirement of the posting",
-  "experience": "1-2 short paragraphs on relevant experience, selected for relevance to this posting",
-  "stack_gap": "ONE sentence naming the narrower experience gap for the quoted requirement -- only if it names a specific language, framework or stack; omit otherwise"
+  "why": "1-2 sentences that continue the opening: why this role -- link one specific fact about the candidate to one specific thing the job involves; the job's technologies appear only as the job's, never as the candidate's",
+  "experience": "1-2 short paragraphs about specific projects from the facts: what each one is and does, with only the technologies its own fact lists; no sentence summing up the candidate's overall skills or stack",
+  "stack_gap": "ONE sentence stating what the facts show about the candidate's work with the stack named in the quoted requirement (which project used it, or that none did) -- no number of years, and not the requirement restated or negated; omit if the requirement names no specific language, framework or stack"
 }"""
 
 # same shape minus stack_gap: used when the posting quoted no years requirement
 COVER_LETTER_SCHEMA_NO_STACK_GAP = """{
-  "why": "1-2 sentences that continue the opening: why this role -- link one specific fact to one specific requirement of the posting",
-  "experience": "1-2 short paragraphs on relevant experience, selected for relevance to this posting"
+  "why": "1-2 sentences that continue the opening: why this role -- link one specific fact about the candidate to one specific thing the job involves; the job's technologies appear only as the job's, never as the candidate's",
+  "experience": "1-2 short paragraphs about specific projects from the facts: what each one is and does, with only the technologies its own fact lists; no sentence summing up the candidate's overall skills or stack"
 }"""
 
 
@@ -38,7 +46,7 @@ def build_cover_letter_prompt(facts: list[dict], job_posting: dict, gaps: list[G
 {quoted}
 </years_requirements>
 
-The candidate doesn't meet the years requirement(s) above; a separate paragraph already says so in general terms. If a requirement names a specific language, framework or stack, write "stack_gap": one plain sentence naming the narrower gap for it, using only the facts (e.g. how much of the candidate's work actually used that stack). If no requirement names one, omit "stack_gap"."""
+The candidate doesn't meet the years requirement(s) above; a separate paragraph already says so in general terms. If a requirement names a specific language, framework or stack, write "stack_gap": one plain sentence stating what the facts show about the candidate's work with that stack -- which project used it, or that no project did. State it as a fact about the candidate's projects; don't restate or negate the requirement ("I haven't done X for more than three years" implies some years), and don't mention any number of years. If no requirement names one, omit "stack_gap"."""
         schema = COVER_LETTER_SCHEMA
     else:
         stack_section = ""
@@ -56,11 +64,19 @@ The candidate doesn't meet the years requirement(s) above; a separate paragraph 
 
 {stack_section}
 
-The opening sentence, the closing, and a paragraph about the candidate's gaps are written separately. The letter opens with: "{escape_untrusted(opening)}" -- "why" continues straight after it, so don't restate the role or company and don't greet. Neither "why" nor "experience" mentions the candidate's gaps (experience, degree, GPA, visa) -- they're handled separately.
+The opening sentence, the closing, and a paragraph about the candidate's gaps are written separately. The letter opens with: "{escape_untrusted(opening)}" -- "why" continues straight after it, so don't restate the role or company and don't greet.
 
-In the experience paragraph(s), describe each project only with what its own fact says -- its own tech and what it actually does. Don't claim the posting's technologies for a project whose fact doesn't list them.
+The job posting describes the job, not the candidate. Everything said about the candidate, in "why" and "experience" alike, comes from the facts above and nothing else:
+- A technology, tool, or area of work ("frontend", "backend", "fullstack", ...) belongs to the candidate only if a fact above names it for the candidate. If the posting asks for something no fact names, leave it out: don't claim it, and don't mention it as missing.
+- In "why", the posting's technologies and areas of work may appear only as what the job involves, never as something the candidate has used, done, or worked across.
+- "experience" describes specific projects, each only with what its own fact says: its own tech and what it actually does. Don't write a sentence that sums up the candidate's overall skills or lists technologies across projects -- name each technology inside the sentence about the project whose fact lists it.
+- Never make a claim stronger than its fact: no "extensive", "strong", "solid", "deep", "expert", "experienced", "proven", "production" or "years of" unless a fact says exactly that. Keep every qualifier a fact carries ("experimental", "prototype", "in progress").
+- Do not invent numbers, percentages, or outcomes (e.g. performance gains, user counts, cost savings) that aren't present in the facts.
+- Neither "why" nor "experience" mentions the candidate's gaps (experience, degree, GPA, visa) -- they're handled separately.
 
-Match the tone of the posting where the posting itself is direct, rather than defaulting to formal boilerplate. No generic filler ("I am excited to...", "passion for...", "I believe my skills align well..."). Keep it short: the whole letter has to fit on one page. Do not invent numbers, percentages, or outcomes (e.g. performance gains, user counts, cost savings) that aren't present in the facts.
+Match the tone of the posting where the posting itself is direct, rather than defaulting to formal boilerplate. No generic filler ("I am excited to...", "passion for...", "I believe my skills align well..."). Keep it short: the whole letter has to fit on one page.
+
+Every technology you name in "why" or "experience" must appear in a fact above for the candidate -- if you can't point to the fact, leave it out.
 
 Respond with a JSON object matching exactly this shape:
 {schema}"""

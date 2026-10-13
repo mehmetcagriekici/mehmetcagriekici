@@ -84,16 +84,26 @@ def _first_match(pattern: re.Pattern, text: str) -> str | None:
 # "3+ years", "5-7 years", "2 years", and spelled out: "two years" -- counted
 # only when shaped like a requirement: "years" followed by a requirement word
 # ("3+ years of Go", "5 years building", "years' experience"), or a line that
-# also says "experience". "We are 12 years old" / "founded 10 years ago" don't
-# count -- they'd otherwise be quoted to the model as the posting's requirement.
+# also says "experience". Hyphenated forms like "3-year product experience" and
+# "18-month experience" are valid requirement phrases too. "We are 12 years
+# old" / "founded 10 years ago" don't count -- they'd otherwise be quoted to
+# the model as the posting's requirement. Nor does the length of a degree:
+# "4-year degree or equivalent experience" asks for a degree (the degree rule's
+# job), and quoted as a years requirement it invited a stack_gap sentence.
 _YEARS = (
-    r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:\+|-\s*\d+)?\s*"
+    r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*"
+    # allow normal ranges (3-5 years), a bare minimum sign (5+ years), and
+    # hyphenated phrases (3-year, 18-month) before the unit itself
+    r"(?:\+|-\s*\d+)?(?:\s*-\s*)?\s*"
     # months count too: "Minimum 18 months of experience with Go"
     r"(?:years?|yrs?|months?)\b\.?"
+    r"(?!\s*(?:degree|bachelor|undergraduate|college|university|program)s?\b)"
 )
 _YEARS_REQUIREMENT = re.compile(
-    _YEARS + r"'?\s*(?:of|in|with|experience|building|working|developing|designing|writing"
-    r"|professional|hands-on|industry|commercial)\b",
+    _YEARS
+    + r"'?\s*(?:of|in|with|experience|building|working|developing|designing|writing"
+    r"|professional|hands-on|industry|commercial|"
+    r"(?:[A-Za-z][A-Za-z-]*(?:\s+[A-Za-z][A-Za-z-]*)*\s+)?experience)\b",
     re.I,
 )
 _YEARS_ANY = re.compile(_YEARS, re.I)

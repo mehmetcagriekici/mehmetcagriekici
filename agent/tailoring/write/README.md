@@ -35,6 +35,6 @@ On top of that, answers are checked against the `questions` they were generated 
 
 ## Test coverage
 
-No committed test suite (tests are the user's to write). Behavior described above was checked with throwaway scripts during development — mocked LLM responses for each `WriteError` path, real Chromium rendering for overflow — not with tests in the repo.
+No committed tests for `write/` (tests are the user's to write; `../../tests/` covers only `gaps/` and `generate.fit_facts()`). Behavior described above was checked with throwaway scripts during development — mocked LLM responses for each `WriteError` path, real Chromium rendering for overflow — not with tests in the repo.
 
 See `../README.md`.

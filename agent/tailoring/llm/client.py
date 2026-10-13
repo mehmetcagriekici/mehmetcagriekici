@@ -153,4 +153,7 @@ async def llm_ollama(
     if response.done_reason == "length":
         raise OutputTooLongError(f"output cut off at num_predict={NUM_PREDICT} tokens")
 
+    if response.message.content is None:
+        raise OllamaError("no llm response message content")
+
     return response.message.content

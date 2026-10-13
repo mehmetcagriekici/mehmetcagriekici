@@ -185,6 +185,31 @@ CASES = [
         True,
         id="months-of-experience",
     ),
+    pytest.param(
+        {"description": "Minimum 18-month experience with Go."},
+        EXPERIENCE,
+        True,
+        id="hyphenated-months-of-experience",
+    ),
+    pytest.param(
+        {"description": "3-year product experience required."},
+        EXPERIENCE,
+        True,
+        id="hyphenated-years-product-experience",
+    ),
+    # 2026-10-13 review: a degree's length isn't a years requirement
+    pytest.param(
+        {"description": "4-year degree in Computer Science or equivalent experience."},
+        EXPERIENCE,
+        False,
+        id="four-year-degree-not-years",
+    ),
+    pytest.param(
+        {"description": "4-year degree and 3+ years of experience with Go."},
+        EXPERIENCE,
+        True,
+        id="four-year-degree-with-years-requirement",
+    ),
 ]
 
 
@@ -206,3 +231,10 @@ def test_company_history_not_quoted(line: str) -> None:
     decision = _decision({"description": line}, EXPERIENCE)
     assert decision.applies is True
     assert decision.requirements == []
+
+
+# 2026-10-13 review: excluding a degree's length mustn't stop a real years
+# requirement on the same line from being quoted to the model.
+def test_years_requirement_next_to_degree_quoted() -> None:
+    line = "4-year degree and 3+ years of experience with Go."
+    assert _decision({"description": line}, EXPERIENCE).requirements == [line]

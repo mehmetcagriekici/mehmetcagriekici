@@ -26,7 +26,7 @@
 
 ## Status
 
-- **Built (code, committed):** `source_of_truth/` (data), `matching/`, `tailoring/`. No committed test suite — tests are the user's to write.
+- **Built (code, committed):** `source_of_truth/` (data), `matching/`, `tailoring/`. Tests in `tests/` (pytest: gap rules, `fit_facts()`) are the user's to write.
 - **Design only (README, no code):** `sourcing/`, `form_automation/`, `tracking/`, `review_gate/`, and the runner that ties the pipeline together (ranking, cap, stopping on infrastructure failures, re-check before submit).
 
 ## Decision log
@@ -96,9 +96,14 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - "AI-assisted" labels removed: the user uses AI daily as a tool and owns all work in their repos equally. The "experimental, not a skill I can speak to in depth" qualifiers stay — they're about depth, not authorship.
 - Fixture margin dropped from 3 to 2 fit facts on both sides; threshold unchanged.
 
+**2026-10-13 — generator honesty is a tailoring problem**
+- The Nordbridge rerun still invented React and inflated claims (see `BACKLOG.md`). Fixing it belongs in `tailoring/` — still in progress — and the user works on that code directly rather than through sessions here; expect drastic changes there. Supersedes "building `review_gate/` closes the FIX NOW item" (2026-10-08): `review_gate/` stays the last check before submission, not the fix.
+- First changes in `tailoring/` (by the user): the cover-letter prompt and schema extend the attribution rule to `why` and summary sentences and ban strengthening words; the years rule accepts hyphenated forms ("3-year", "18-month"); an empty Ollama response is an `OllamaError` (infrastructure).
+- Review of those changes: a figure attached to a degree ("4-year degree") isn't a years figure — the hyphen change had made "4-year degree or equivalent experience" raise and quote the experience gap. Chosen over raising it without quoting it: "equivalent experience" there stands in for the degree. `fit_facts()` returns the full list when not even one fact fits, so the call fails as `PROMPT_TOO_LONG` instead of being sent with no facts. Cover-letter prompt: `experience` limited to project-by-project sentences (no stack summaries), `stack_gap` told to state what the facts show, with no years, never the requirement negated. Not yet checked against a 14B run.
+
 ## Open questions
 
-- **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built; building it closes the FIX NOW item in `BACKLOG.md`.
+- **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built. No longer the fix for `BACKLOG.md`'s FIX NOW item (2026-10-13); when to build it is undecided.
 - **Fixtures** still use the old shape with `requirements` lists; move them to the normalized shape, then recalibrate — ideally on real postings from the first adapter.
 - **`projects-detail.json`** has no entry for Message Notification Router (user to write).
 - **Domain** for the Cloudflare Tunnel isn't registered yet.
