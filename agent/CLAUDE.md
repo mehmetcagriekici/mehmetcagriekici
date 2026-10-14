@@ -26,8 +26,9 @@
 
 ## Status
 
-- **Built (code, committed):** `source_of_truth/` (data), `matching/`, `tailoring/`. Tests in `tests/` (pytest: gap rules, `fit_facts()`) are the user's to write.
-- **Design only (README, no code):** `sourcing/`, `form_automation/`, `tracking/`, `review_gate/`, and the runner that ties the pipeline together (ranking, cap, stopping on infrastructure failures, re-check before submit).
+- **Built, in use (code, committed):** `source_of_truth/` (data), `matching/`, `tailoring/`. Tests in `tests/` (pytest: gap rules, `fit_facts()`) are the user's to write.
+- **In progress:** `sourcing/` — next to build, starting with the Greenhouse adapter.
+- **Design only (README, no code):** `form_automation/`, `tracking/`, `review_gate/`, and the runner that ties the pipeline together (ranking, cap, stopping on infrastructure failures, re-check before submit).
 
 ## Decision log
 
@@ -101,9 +102,16 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - First changes in `tailoring/` (by the user): the cover-letter prompt and schema extend the attribution rule to `why` and summary sentences and ban strengthening words; the years rule accepts hyphenated forms ("3-year", "18-month"); an empty Ollama response is an `OllamaError` (infrastructure).
 - Review of those changes: a figure attached to a degree ("4-year degree") isn't a years figure — the hyphen change had made "4-year degree or equivalent experience" raise and quote the experience gap. Chosen over raising it without quoting it: "equivalent experience" there stands in for the degree. `fit_facts()` returns the full list when not even one fact fits, so the call fails as `PROMPT_TOO_LONG` instead of being sent with no facts. Cover-letter prompt: `experience` limited to project-by-project sentences (no stack summaries), `stack_gap` told to state what the facts show, with no years, never the requirement negated. Not yet checked against a 14B run.
 
+**2026-10-14 — tailoring done for now; sourcing next**
+- 14B Nordbridge rerun (47 min: resume 26, letter 21): both one page, the 10-13 inventions gone. Left open in `BACKLOG.md`: a false `stack_gap` ("not worked with TypeScript or Express"), matching missing the Health-records project, gRPC in `profile.json`'s BlightSanest `stack`, a summary distortion.
+- **One clean-enough pass is the bar; `tailoring/` is marked built, in use, and `sourcing/` is next.** The user's call: the generator won't be perfect, and the open findings do no harm until anything can be submitted. Considered and declined: fixing the prompt and rerunning before moving on; several runs across fixtures before calling it done.
+- Docs consistency pass: stale references fixed (Controller "rejecting" in `tracking/`, `hybrid_search(...)` as matching's entry point, the Controller as a "distinct" LLM, form_automation reading `source_of_truth/` itself, sourcing sharing code with TypeScript), plus `constants.py`'s calibration comment (9/10/7 and 3, 2-fact margin — matching the 10-08 re-check).
+- `BACKLOG.md`'s BEFORE SOURCING tier dropped (empty, and sourcing is now being built); two tiers left, FIX NOW and LATER.
+
 ## Open questions
 
 - **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built. No longer the fix for `BACKLOG.md`'s FIX NOW item (2026-10-13); when to build it is undecided.
+- **Form-answers call** has never run at 14B; first real exercise when `form_automation/` supplies questions.
 - **Fixtures** still use the old shape with `requirements` lists; move them to the normalized shape, then recalibrate — ideally on real postings from the first adapter.
 - **`projects-detail.json`** has no entry for Message Notification Router (user to write).
 - **Domain** for the Cloudflare Tunnel isn't registered yet.

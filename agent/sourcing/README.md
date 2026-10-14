@@ -1,6 +1,6 @@
 # sourcing
 
-Pulls job listings from ATS-backed career pages (Greenhouse, Lever, Ashby, Workday, etc.) — v1 scope; LinkedIn/Glassdoor/JobLeads are excluded. Per-ATS adapters, shared with `form_automation/` where possible, since both need to know the same ATS's structure.
+Pulls job listings from ATS-backed career pages (Greenhouse, Lever, Ashby, Workday, etc.) — v1 scope; LinkedIn/Glassdoor/JobLeads are excluded. Per-ATS adapters. `form_automation/` (TypeScript) needs to know the same ATS's structure, but can't share this Python code — only what's learned about each ATS.
 
 **Language: Python** — an internal module of the shared Python service (see `../README.md`). A run fetches once, at the start (see `../README.md`'s Run lifecycle).
 
@@ -46,4 +46,4 @@ Every adapter produces the same shape:
 - **Pacing:** a fixed ~1–2 s delay between company boards (20–50 requests per run).
 - **Errors:** a board that fails to fetch (e.g. a 404 after a rename) is skipped and reported ("board fetch failed: acme (404)"); a single posting that can't be normalized (e.g. no title) is skipped and reported while the rest of its board proceeds. Nothing is auto-disabled — a repeating failure in the report is the user's cue to fix the entry.
 
-Planning stage — no code yet. See `../CLAUDE.md` for the decision history.
+In progress — no code yet; the Greenhouse adapter comes first. See `../CLAUDE.md` for the decision history.

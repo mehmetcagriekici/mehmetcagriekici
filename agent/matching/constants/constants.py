@@ -6,10 +6,10 @@ BM25_B = 0.75
 # NON_FIT_FACT_IDS) score rrf_score >= MATCH_RRF_THRESHOLD against it.
 # Recalibrated 2026-10-07 (second pass), after the query was limited to the
 # posting's content fields (no id/salary) and education + logistics
-# preferences stopped counting: at 0.028 the relevant fixtures keep 9/8/8 fit
-# facts and the sales-manager mismatch 2, so MATCH_MIN_FACTS = 5 leaves a
-# 3-fact margin on both sides -- better than any threshold with the old
-# minimum of 4. Still four synthetic postings -- recalibrate against real ATS
+# preferences stopped counting. Re-checked 2026-10-08 after the source_of_truth
+# accuracy fixes: at 0.028 the relevant fixtures keep 9/10/7 fit facts and the
+# sales-manager mismatch 3, so MATCH_MIN_FACTS = 5 leaves a 2-fact margin on
+# both sides. Still four synthetic postings -- recalibrate against real ATS
 # data (scripts/calibrate_threshold.py).
 MATCH_RRF_THRESHOLD = 0.028
 MATCH_MIN_FACTS = 5

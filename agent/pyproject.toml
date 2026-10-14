@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Shared Python service (sourcing, matching, tailoring, tracking, review_gate) for the job-application automation agent"
 requires-python = ">=3.11"
 dependencies = [
-    # matching — hybrid_search(job_posting, source_of_truth): BM25 + embeddings
+    # matching — evaluate_posting(job_posting, source_of_truth_dir): BM25 + embeddings
     "numpy",
     "nltk",
     "sentence-transformers",

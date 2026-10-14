@@ -6,7 +6,7 @@ Fit-scoring: job posting vs. `source_of_truth` — fully deterministic, no LLM i
 
 ## How it works
 
-One call, `hybrid_search(job_posting, source_of_truth)`, per posting. No chained stages, no per-instance `job_config` filter — `job_config` is reduced to ATS selection only (a sourcing/routing concern), and role/location/tech preferences live in the shared `source_of_truth/preferences.json` instead.
+One call, `evaluate_posting(job_posting, source_of_truth_dir)`, per posting — it builds the corpus and runs the hybrid search (`HybridSearch.rrf_search`). No chained stages, no per-instance `job_config` filter — `job_config` is reduced to ATS selection only (a sourcing/routing concern), and role/location/tech preferences live in the shared `source_of_truth/preferences.json` instead.
 
 `hybrid_search` combines embedding search (sentence-transformers, CPU-only, cosine similarity) with keyword search (BM25) via RRF fusion — no structured field-diff.
 

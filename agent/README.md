@@ -9,9 +9,9 @@ Kept separate from the manual cover-letter/resume workflow at the repo root (`..
 | Folder | Status | Purpose |
 |---|---|---|
 | [`source_of_truth/`](source_of_truth/README.md) | Built, in use | Profile store the rest of the pipeline reads from |
-| [`sourcing/`](sourcing/README.md) | Planned | Pulls job listings from ATS career pages |
+| [`sourcing/`](sourcing/README.md) | In progress | Pulls job listings from ATS career pages |
 | [`matching/`](matching/README.md) | Built, in use | Fit-scoring against the profile store |
-| [`tailoring/`](tailoring/README.md) | In progress | Generates per-job resume/cover letter and screening-question answers |
+| [`tailoring/`](tailoring/README.md) | Built, in use | Generates per-job resume/cover letter and screening-question answers |
 | [`form_automation/`](form_automation/README.md) | Planned | Per-ATS form-filling and submission |
 | [`tracking/`](tracking/README.md) | Planned | State store for what's been applied to |
 | [`review_gate/`](review_gate/README.md) | Planned | Checks generated materials for honesty/relevance before submission |
