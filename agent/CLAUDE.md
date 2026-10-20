@@ -108,6 +108,9 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - Docs consistency pass: stale references fixed (Controller "rejecting" in `tracking/`, `hybrid_search(...)` as matching's entry point, the Controller as a "distinct" LLM, form_automation reading `source_of_truth/` itself, sourcing sharing code with TypeScript), plus `constants.py`'s calibration comment (9/10/7 and 3, 2-fact margin — matching the 10-08 re-check).
 - `BACKLOG.md`'s BEFORE SOURCING tier dropped (empty, and sourcing is now being built); two tiers left, FIX NOW and LATER.
 
+**2026-10-20 — normalized posting keys**
+- Every posting has every key; `None` means the ATS didn't provide it, a missing key is an adapter bug. Required: `id`, `ats`, `board`, `company`, `title`, `location`, `description`, `url`, `posted_at`, `raw` — `None` skips and reports the posting. Optional: `employment_type` (`None` for Greenhouse), `workplace_type` (stays `"unknown"`). No placeholder values.
+
 ## Open questions
 
 - **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built. No longer the fix for `BACKLOG.md`'s FIX NOW item (2026-10-13); when to build it is undecided.
