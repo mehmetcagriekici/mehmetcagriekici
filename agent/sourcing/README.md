@@ -18,7 +18,15 @@ The list is hand-maintained, in its own JSON file in this folder, shared by all 
 - `enabled: false` — pauses a company without deleting the entry.
 - `note` — a reminder for the user; the pipeline ignores it.
 
-There's no display-name field: the company's real name comes from the ATS response where the ATS provides one (confirmed per adapter; a board-level endpoint or the board name is the fallback). The pipeline never writes to this file. Automatic company discovery is a deferred later phase.
+There's no display-name field: the company's real name comes from the ATS response (Greenhouse: each job's `company_name`). A posting without one is skipped and reported — the board slug is never used as a name. The pipeline never writes to this file.
+
+## Structure
+
+- **`fetch/`** — one adapter per ATS; all knowledge of that ATS lives here and nowhere else. Each adapter is two functions: a thin **fetch** (the HTTP call; reports a failed board) and a pure **reshape** (parsed response + board slug → postings in the shape below, plus skips). Reshape does no I/O, so tests feed it a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`).
+- **`normalize/`** — shared cleanup, no per-ATS code: HTML → text, the key/required-field check, the stale filter.
+- **Reporting** — each step returns its results plus a list of skips (posting or board, which step, reason); the runner joins them into the end-of-run report. No shared collector object.
+
+What the adapter hands to normalize is already in posting shape, except that `description` is still HTML (ATS-specific escaping already undone) and `posted_at` is a timezone-aware `datetime` (each ATS has its own date format, so parsing it is the adapter's job). Automatic company discovery is a deferred later phase.
 
 ## Normalized posting
 
@@ -32,14 +40,16 @@ Every adapter produces the same shape:
 | `title`, `location` | as the ATS gives them (`location` is free text) |
 | `employment_type` | full-time / part-time / contract, where the ATS provides it |
 | `workplace_type` | `remote` / `hybrid` / `onsite` / `unknown` — real values from Lever/Ashby; `unknown` for Greenhouse, where the visa rule falls back to location text |
-| `description` | plain text, HTML removed, **each HTML bullet on its own line** |
-| `url`, `posted_at` | the posting page; first-published date where available, else updated date |
+| `description` | plain text, HTML removed by normalize, **each HTML bullet on its own line** |
+| `url` | the posting page |
+| `posted_at` | first-published date, timezone-aware `datetime`. Greenhouse: `first_published`, never `updated_at` — companies bulk-edit old postings, which makes them look fresh. Whether another ATS may use an updated date is decided with its adapter |
+| `requisition_key` | the ATS's id for the underlying job when one job is published as several postings (Greenhouse: `internal_job_id`, stored as a string); `tracking/` dedups on company + `requisition_key` |
 | `raw` | the untouched ATS response, kept for debugging rules against what the ATS actually sent |
 
 **Every posting has every key.** `None` means the ATS didn't provide the value; a missing key is an adapter bug. Normalize checks both:
 
 - **Required** — `id`, `ats`, `board`, `company`, `title`, `location`, `description`, `url`, `posted_at`, `raw`. A posting with any of them `None` is skipped and reported.
-- **Optional** — `employment_type` (`None` where the ATS doesn't provide it, e.g. Greenhouse) and `workplace_type` (`unknown` where the ATS doesn't provide it). An optional field being `None` never skips a posting.
+- **Optional** — `employment_type` (`None` where the ATS doesn't provide it, e.g. Greenhouse), `requisition_key` (`None` where the ATS has none) and `workplace_type` (`unknown` where the ATS doesn't provide it). An optional field being `None` never skips a posting.
 
 No placeholder values: a value that's missing or failed to parse is `None` (or the posting is skipped), never a stand-in that looks like real data.
 
@@ -47,10 +57,32 @@ No placeholder values: a value that's missing or failed to parse is `None` (or t
 
 **Consumers read named content fields, never the whole dict.** `matching/`'s query, `tailoring/`'s prompts, and the gap rules all go through `posting_content()` (`matching/document_builder/`): `title`, `company`, `location`, `workplace_type`, `employment_type`, `description`. `raw`, ids, urls and dates are stored but never sent into a search, a prompt, or a keyword rule.
 
+## Greenhouse
+
+`boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true` — `content=true` is what includes the description. Checked against real responses (coinbase, gitlab).
+
+| Posting field | Greenhouse |
+|---|---|
+| `id` | `greenhouse:{board}:{id}` |
+| `company` | `company_name` |
+| `title` | `title` |
+| `location` | `location.name` (e.g. "Remote, Canada; Remote, United Kingdom") |
+| `description` | `content`, HTML-unescaped by the adapter (it arrives entity-escaped: `&lt;p&gt;`) |
+| `url` | `absolute_url` |
+| `posted_at` | `first_published` |
+| `requisition_key` | `internal_job_id` |
+| `employment_type` | `None` — not provided (`metadata` holds company-specific custom fields) |
+| `workplace_type` | `unknown` — not provided |
+| `raw` | the job object |
+
+**One job, several posts.** Greenhouse can publish one job as several posts — typically one per location — each with its own `id` and the same `internal_job_id` (gitlab: 3 such pairs in 232 posts). Each post stays its own posting and matching ranks them; once one is applied to, `tracking/` treats the rest as duplicates (company + `requisition_key`). Tailoring uses the location of the post actually applied to.
+
+`absolute_url` can point to the company's own careers site rather than a Greenhouse page — not relevant until `form_automation/`.
+
 ## Filtering and errors
 
 - **Stale filter:** postings older than 30 days (by `posted_at`) are dropped and reported as "skipped (stale)" in the end-of-run report. It's the only filter sourcing applies — role/location/tech fit is decided entirely by `matching/`.
 - **Pacing:** a fixed ~1–2 s delay between company boards (20–50 requests per run).
 - **Errors:** a board that fails to fetch (e.g. a 404 after a rename) is skipped and reported ("board fetch failed: acme (404)"); a single posting that can't be normalized (e.g. a required field is `None`) is skipped and reported while the rest of its board proceeds. Nothing is auto-disabled — a repeating failure in the report is the user's cue to fix the entry.
 
-In progress — no code yet; the Greenhouse adapter comes first. See `../CLAUDE.md` for the decision history.
+In progress — no code yet; the Greenhouse adapter comes first. Starter company list: gitlab, adyen, doctolib, celonis, n26, sumup, hellofresh, contentful, monzo, getyourguide, trivago. See `../CLAUDE.md` for the decision history.

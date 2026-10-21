@@ -110,6 +110,14 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 
 **2026-10-20 — normalized posting keys**
 - Every posting has every key; `None` means the ATS didn't provide it, a missing key is an adapter bug. Required: `id`, `ats`, `board`, `company`, `title`, `location`, `description`, `url`, `posted_at`, `raw` — `None` skips and reports the posting. Optional: `employment_type` (`None` for Greenhouse), `workplace_type` (stays `"unknown"`). No placeholder values.
+- Structure: `fetch/` holds one adapter per ATS (all ATS knowledge there), `normalize/` only shared cleanup, `serve/` removed (the TypeScript handoff is designed with `form_automation/`). Each step returns results plus skips; the runner joins them, no collector object.
+- Greenhouse (checked against coinbase and gitlab): `company` from `company_name`, skipped if missing — no slug fallback; `posted_at` from `first_published`, not `updated_at` (bulk edits make old postings look fresh); one job posted in several locations stays several postings, deduped on company + `internal_job_id`.
+
+**2026-10-21 — Greenhouse adapter shape**
+- Adapter = pure reshape (parsed JSON → postings + skips) plus a thin fetch, so tests use a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`, the whole board) with no network.
+- Greenhouse's HTML-unescaping happens in the adapter (ATS-specific); tag stripping in normalize (shared).
+- `posted_at` is a timezone-aware `datetime` parsed by the adapter — ISO strings with differing offsets don't compare correctly as text, and date formats differ by ATS (Lever: epoch ms).
+- New optional field `requisition_key` (Greenhouse: `internal_job_id`, `None` when the ATS has none) carries the dedup key, since `raw` is never read.
 
 ## Open questions
 
