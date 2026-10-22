@@ -39,15 +39,25 @@ What the adapter hands to normalize is already in posting shape, except that `de
 
 All three live in `sourcing/custom_types/posting.py`.
 
-**`Posting`** — a `TypedDict`: a plain dict at runtime, so consumers' `.get()` and `posting_content()` are unchanged. One type for both the adapter's output and normalize's. Every key is always present (fields and meanings: see Normalized posting below).
+**`Posting`** — a `TypedDict`: a plain dict at runtime, so consumers' `.get()` and `posting_content()` are unchanged. One type for both the adapter's output and normalize's. Every key is always present, one key per row below — no two fields share a key.
 
-| Field | Type |
-|---|---|
-| `id`, `ats`, `board`, `company`, `title`, `location`, `description`, `url` | `str \| None` — required; `None` here is what normalize skips |
-| `posted_at` | `datetime \| None` — required, timezone-aware |
-| `raw` | `dict[str, Any]` — required |
-| `employment_type`, `requisition_key` | `str \| None` — optional |
-| `workplace_type` | `Literal["remote", "hybrid", "onsite", "unknown"]` — never `None` |
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | `str \| None` | yes | `{ats}:{board}:{ats_id}`, e.g. `greenhouse:gitlab:8860302002` — namespaced, so ids from different ATSs can't collide in `tracking/` |
+| `ats` | `str \| None` | yes | which ATS the posting came from, e.g. `greenhouse` |
+| `board` | `str \| None` | yes | the board slug from the company list, e.g. `gitlab` |
+| `company` | `str \| None` | yes | the company's display name from the ATS, e.g. `GitLab` (used in the cover letter's greeting) |
+| `title` | `str \| None` | yes | the job title as the ATS gives it, e.g. `Senior Backend Engineer (Go)` |
+| `location` | `str \| None` | yes | free text as the ATS gives it, e.g. `Remote, Canada; Remote, United Kingdom` — the visa rule reads it |
+| `description` | `str \| None` | yes | the posting's body: HTML from the adapter, then plain text after normalize, **each HTML bullet on its own line** |
+| `url` | `str \| None` | yes | the posting page |
+| `posted_at` | `datetime \| None` | yes | first-published date, timezone-aware. Greenhouse: `first_published`, never `updated_at` — companies bulk-edit old postings, which makes them look fresh. Whether another ATS may use an updated date is decided with its adapter |
+| `raw` | `dict[str, Any]` | yes | the untouched ATS job object, kept for debugging rules against what the ATS actually sent; never read by the pipeline |
+| `employment_type` | `str \| None` | no | full-time / part-time / contract, where the ATS provides it (`None` for Greenhouse) |
+| `requisition_key` | `str \| None` | no | the ATS's id for the underlying job when one job is published as several postings (Greenhouse: `internal_job_id`, stored as a string); `tracking/` dedups on company + `requisition_key`. `None` where the ATS has none |
+| `workplace_type` | `Literal["remote", "hybrid", "onsite", "unknown"]` | no — never `None` | real values from Lever/Ashby; `unknown` for Greenhouse, where the visa rule falls back to `location` |
+
+Required `None` is what normalize skips (`MISSING_FIELD`).
 
 **`Skip`** — a `TypedDict`, like `Posting`: a note for the end-of-run report about something dropped. Not a kept posting: the posting itself is gone.
 
@@ -70,21 +80,7 @@ No `step` field: each reason comes from exactly one step, so it would only repea
 
 ## Normalized posting
 
-Every adapter produces the same shape:
-
-| Field | Meaning |
-|---|---|
-| `id` | `{ats}:{board}:{ats_id}` — namespaced, so ids from different ATSs can't collide in `tracking/` |
-| `ats`, `board` | which ATS, and the board slug from the company list |
-| `company` | the display name (used in the cover letter's greeting) |
-| `title`, `location` | as the ATS gives them (`location` is free text) |
-| `employment_type` | full-time / part-time / contract, where the ATS provides it |
-| `workplace_type` | `remote` / `hybrid` / `onsite` / `unknown` — real values from Lever/Ashby; `unknown` for Greenhouse, where the visa rule falls back to location text |
-| `description` | plain text, HTML removed by normalize, **each HTML bullet on its own line** |
-| `url` | the posting page |
-| `posted_at` | first-published date, timezone-aware `datetime`. Greenhouse: `first_published`, never `updated_at` — companies bulk-edit old postings, which makes them look fresh. Whether another ATS may use an updated date is decided with its adapter |
-| `requisition_key` | the ATS's id for the underlying job when one job is published as several postings (Greenhouse: `internal_job_id`, stored as a string); `tracking/` dedups on company + `requisition_key` |
-| `raw` | the untouched ATS response, kept for debugging rules against what the ATS actually sent |
+Every adapter produces the `Posting` shape — fields, types and meanings are in **Types** above.
 
 **Every posting has every key.** `None` means the ATS didn't provide the value; a missing key is an adapter bug. Normalize checks both:
 
