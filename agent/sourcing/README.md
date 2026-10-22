@@ -22,22 +22,36 @@ There's no display-name field: the company's real name comes from the ATS respon
 
 ## Structure
 
-- **`fetch/`** — one adapter per ATS; all knowledge of that ATS lives here and nowhere else. Each adapter is two functions: a thin **fetch** (the HTTP call and JSON parsing; a failed request or a broken response — invalid JSON, no job list — is a `FETCH_FAILED` skip for the board) and a pure **reshape** (parsed response + board slug → `list[Posting]`, nothing else). Reshape never skips: a value it can't fill becomes `None`, and normalize skips and reports the posting. Reshape does no I/O, so tests feed it a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`).
+- **`fetch/`** — one adapter per ATS, in its own subfolder (`fetch/greenhouse/`); all of that ATS's logic lives there and nowhere else (its response type lives with the other types, below). Each adapter is two functions: a thin **fetch** (the HTTP call and JSON parsing; a failed request or a broken response — invalid JSON, no job list — is a `FETCH_FAILED` skip for the board) and a pure **reshape** (the ATS's job list + board slug → `list[Posting]`, nothing else; fetch unwraps the response, so reshape never sees ATS wrappers like Greenhouse's `meta`). Reshape loops over the jobs and never skips or raises on bad input: a missing key, a `None`, or a value it can't parse becomes `None` (read with `.get()`, transformed only when present, a third-party parse error caught by name), and normalize skips and reports the posting. Reshape does no I/O, so tests feed it a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`).
 - **`normalize/`** — shared cleanup, no per-ATS code: HTML → text, the key/required-field check, the stale filter.
-- **`custom_types/posting.py`** — the three types below.
+- **`custom_types/posting.py`** — every type, shared or per-ATS (see Types).
 - **Reporting** — fetch and normalize each return their results plus a list of `Skip`s; the runner joins them into the end-of-run report. No shared collector object.
 
 What the adapter hands to normalize is already in posting shape, except that `description` is still HTML (ATS-specific escaping already undone) and `posted_at` is a timezone-aware `datetime` (each ATS has its own date format, so parsing it is the adapter's job).
 
 | Step | Takes | Returns |
 |---|---|---|
-| fetch | board slug | parsed JSON, or a `Skip` (`FETCH_FAILED`) |
-| reshape | parsed JSON + board slug | `list[Posting]` |
+| fetch | board slug | `list[GreenhousePosting]` (per ATS), or a `Skip` (`FETCH_FAILED`) |
+| reshape | that list + board slug | `list[Posting]` |
 | normalize | `list[Posting]` | `list[Posting]` (cleaned) + `list[Skip]` |
 
 ## Types
 
-All three live in `sourcing/custom_types/posting.py`.
+All types live in `sourcing/custom_types/posting.py`: the shared `Posting`, `Skip` and `SkipReason`, and one response type per ATS.
+
+**`GreenhousePosting`** — a `TypedDict`: one Greenhouse job as fetch hands it to reshape. Fetch builds it from each job in the response, flattening `location.name` into `location_name` and keeping the untouched job object as `raw`. It describes what Greenhouse usually sends, not a guarantee — parsed JSON isn't checked against it, and `company_name`/`first_published` aren't in the docs' list-endpoint example — so reshape reads every key with `.get()`.
+
+| Field | Type | → `Posting` |
+|---|---|---|
+| `id` | from Greenhouse's job id | `id` = `greenhouse:{board}:{id}` |
+| `company_name` | `str` | `company` |
+| `title` | `str` | `title` |
+| `location_name` | `str` (from `location.name`) | `location` |
+| `content` | `str`, entity-escaped HTML | `description`, unescaped |
+| `absolute_url` | `str` | `url` |
+| `first_published` | `str`, ISO 8601 with offset | `posted_at`, via `fromisoformat` |
+| `internal_job_id` | `int` | `requisition_key`, as a string |
+| `raw` | `dict[str, Any]` | `raw` |
 
 **`Posting`** — a `TypedDict`: a plain dict at runtime, so consumers' `.get()` and `posting_content()` are unchanged. One type for both the adapter's output and normalize's. Every key is always present, one key per row below — no two fields share a key.
 
