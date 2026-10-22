@@ -119,6 +119,10 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - `posted_at` is a timezone-aware `datetime` parsed by the adapter — ISO strings with differing offsets don't compare correctly as text, and date formats differ by ATS (Lever: epoch ms).
 - New optional field `requisition_key` (Greenhouse: `internal_job_id`, `None` when the ATS has none) carries the dedup key, since `raw` is never read.
 
+**2026-10-22 — posting and skip types**
+- `Posting` is a `TypedDict` in `sourcing/custom_types/posting.py` — no churn for consumers reading dicts. Rejected: a dataclass/pydantic model (consumers would move to attribute access); two types, adapter output vs. after normalize (the user saw no benefit). Required fields typed `str | None`; `""` for missing values rejected — `None` stays "not provided".
+- `Skip` is a `TypedDict` too, carrying `what`, `reason` (`SkipReason` Enum) and `detail`. Enum over free text so the runner groups the report exactly, not by matching words. No `step` field — each reason maps to one step, so it would duplicate the reason. Reshape returns only `list[Posting]` (supersedes "postings + skips", 10-21): per-job problems become `None` for normalize to skip, and a broken response is fetch's `FETCH_FAILED`. Rejected: an always-empty skips list for a uniform signature; logging in reshape (nothing to log). Briefly considered and withdrawn the same day: dropping skips, dedup and the 10-07 goal for "apply to as many as possible" — the user kept filtering and a clean process.
+
 ## Open questions
 
 - **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built. No longer the fix for `BACKLOG.md`'s FIX NOW item (2026-10-13); when to build it is undecided.

@@ -18,15 +18,55 @@ The list is hand-maintained, in its own JSON file in this folder, shared by all 
 - `enabled: false` — pauses a company without deleting the entry.
 - `note` — a reminder for the user; the pipeline ignores it.
 
-There's no display-name field: the company's real name comes from the ATS response (Greenhouse: each job's `company_name`). A posting without one is skipped and reported — the board slug is never used as a name. The pipeline never writes to this file.
+There's no display-name field: the company's real name comes from the ATS response (Greenhouse: each job's `company_name`). A posting without one is skipped and reported — the board slug is never used as a name. The pipeline never writes to this file. Automatic company discovery is a deferred later phase.
 
 ## Structure
 
-- **`fetch/`** — one adapter per ATS; all knowledge of that ATS lives here and nowhere else. Each adapter is two functions: a thin **fetch** (the HTTP call; reports a failed board) and a pure **reshape** (parsed response + board slug → postings in the shape below, plus skips). Reshape does no I/O, so tests feed it a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`).
+- **`fetch/`** — one adapter per ATS; all knowledge of that ATS lives here and nowhere else. Each adapter is two functions: a thin **fetch** (the HTTP call and JSON parsing; a failed request or a broken response — invalid JSON, no job list — is a `FETCH_FAILED` skip for the board) and a pure **reshape** (parsed response + board slug → `list[Posting]`, nothing else). Reshape never skips: a value it can't fill becomes `None`, and normalize skips and reports the posting. Reshape does no I/O, so tests feed it a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`).
 - **`normalize/`** — shared cleanup, no per-ATS code: HTML → text, the key/required-field check, the stale filter.
-- **Reporting** — each step returns its results plus a list of skips (posting or board, which step, reason); the runner joins them into the end-of-run report. No shared collector object.
+- **`custom_types/posting.py`** — the three types below.
+- **Reporting** — fetch and normalize each return their results plus a list of `Skip`s; the runner joins them into the end-of-run report. No shared collector object.
 
-What the adapter hands to normalize is already in posting shape, except that `description` is still HTML (ATS-specific escaping already undone) and `posted_at` is a timezone-aware `datetime` (each ATS has its own date format, so parsing it is the adapter's job). Automatic company discovery is a deferred later phase.
+What the adapter hands to normalize is already in posting shape, except that `description` is still HTML (ATS-specific escaping already undone) and `posted_at` is a timezone-aware `datetime` (each ATS has its own date format, so parsing it is the adapter's job).
+
+| Step | Takes | Returns |
+|---|---|---|
+| fetch | board slug | parsed JSON, or a `Skip` (`FETCH_FAILED`) |
+| reshape | parsed JSON + board slug | `list[Posting]` |
+| normalize | `list[Posting]` | `list[Posting]` (cleaned) + `list[Skip]` |
+
+## Types
+
+All three live in `sourcing/custom_types/posting.py`.
+
+**`Posting`** — a `TypedDict`: a plain dict at runtime, so consumers' `.get()` and `posting_content()` are unchanged. One type for both the adapter's output and normalize's. Every key is always present (fields and meanings: see Normalized posting below).
+
+| Field | Type |
+|---|---|
+| `id`, `ats`, `board`, `company`, `title`, `location`, `description`, `url` | `str \| None` — required; `None` here is what normalize skips |
+| `posted_at` | `datetime \| None` — required, timezone-aware |
+| `raw` | `dict[str, Any]` — required |
+| `employment_type`, `requisition_key` | `str \| None` — optional |
+| `workplace_type` | `Literal["remote", "hybrid", "onsite", "unknown"]` — never `None` |
+
+**`Skip`** — a `TypedDict`, like `Posting`: a note for the end-of-run report about something dropped. Not a kept posting: the posting itself is gone.
+
+| Field | Type | Example |
+|---|---|---|
+| `what` | `str` — the board slug or the posting id | `"acme"`, `"greenhouse:gitlab:8860302002"` |
+| `reason` | `SkipReason` | `SkipReason.STALE` |
+| `detail` | `str` — free text, shown in the report | `"404"`, `"company"`, `"41 days"` |
+
+No `step` field: each reason comes from exactly one step, so it would only repeat the reason.
+
+**`SkipReason`** — an Enum: the fixed list of values `Skip.reason` can hold. The runner groups the report by it — exact, unlike matching words in free text (same pattern as `tailoring/write/`'s `WriteError`).
+
+| Value | Produced by | Means |
+|---|---|---|
+| `FETCH_FAILED` | fetch | request failed or response broken (invalid JSON, no job list) |
+| `MISSING_KEY` | normalize | a posting lacks a key — an adapter bug |
+| `MISSING_FIELD` | normalize | a required field is `None` |
+| `STALE` | normalize | `posted_at` older than 30 days |
 
 ## Normalized posting
 
