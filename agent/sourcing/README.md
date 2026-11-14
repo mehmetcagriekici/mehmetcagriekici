@@ -39,19 +39,18 @@ What the adapter hands to normalize is already in posting shape, except that `de
 
 All types live in `sourcing/custom_types/posting.py`: the shared `Posting`, `Skip` and `SkipReason`, and one response type per ATS.
 
-**`GreenhousePosting`** — a `TypedDict`: one Greenhouse job as fetch hands it to reshape. Fetch builds it from each job in the response, flattening `location.name` into `location_name` and keeping the untouched job object as `raw`. It describes what Greenhouse usually sends, not a guarantee — parsed JSON isn't checked against it, and `company_name`/`first_published` aren't in the docs' list-endpoint example — so reshape reads every key with `.get()`.
+**`GreenhousePosting`** — a `TypedDict`: one job exactly as Greenhouse sends it, listing only the keys reshape reads (the response has more). Fetch hands the jobs over untouched; reshape does all the picking, and the whole job object goes into `Posting`'s `raw`. It describes what Greenhouse usually sends, not a guarantee — parsed JSON isn't checked against it, and `company_name`/`first_published` aren't in the docs' list-endpoint example — so reshape reads every key with `.get()`, including the nested `location` (missing, `null` or without a `name` → `None`).
 
 | Field | Type | → `Posting` |
 |---|---|---|
 | `id` | from Greenhouse's job id | `id` = `greenhouse:{board}:{id}` |
 | `company_name` | `str` | `company` |
 | `title` | `str` | `title` |
-| `location_name` | `str` (from `location.name`) | `location` |
+| `location` | `{"name": str}` | `location` = `location.name` |
 | `content` | `str`, entity-escaped HTML | `description`, unescaped |
 | `absolute_url` | `str` | `url` |
 | `first_published` | `str`, ISO 8601 with offset | `posted_at`, via `fromisoformat` |
 | `internal_job_id` | `int` | `requisition_key`, as a string |
-| `raw` | `dict[str, Any]` | `raw` |
 
 **`Posting`** — a `TypedDict`: a plain dict at runtime, so consumers' `.get()` and `posting_content()` are unchanged. One type for both the adapter's output and normalize's. Every key is always present, one key per row below — no two fields share a key.
 

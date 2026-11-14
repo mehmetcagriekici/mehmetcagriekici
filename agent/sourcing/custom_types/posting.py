@@ -1,18 +1,17 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
 
 
 class GreenhousePosting(TypedDict):
     id: str
     company_name: str
     title: str
-    location_name: str
+    location: dict[Literal["name"], str]
     content: str
     absolute_url: str
     first_published: str
     internal_job_id: int
-    raw: dict[str, Any]
 
 
 class Posting(TypedDict):
@@ -28,7 +27,7 @@ class Posting(TypedDict):
     url: str | None
     posted_at: datetime | None
     requisition_key: str | None
-    raw: dict[str, Any]
+    raw: GreenhousePosting
 
 
 class SkipReason(Enum):

@@ -126,6 +126,11 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - Per-ATS response types (`GreenhousePosting`) live in `custom_types/posting.py` with the shared types — supersedes "all ATS knowledge in the adapter" for types; logic stays in `fetch/`. Greenhouse's docs omit `company_name`/`first_published` from the list endpoint's example, though every real post has them; no change, since their absence would surface as `MISSING_FIELD` skips.
 - Greenhouse `reshape()` written (by the user): `.get()` per field, transforms only on present values, `parse_time()` catching `ValueError`. Open in `BACKLOG.md`: a date without an offset parses as naive. Briefly considered and withdrawn the same day: dropping skips, dedup and the 10-07 goal for "apply to as many as possible" — the user kept filtering and a clean process.
 
+**2026-10-23 / 11-14 — Greenhouse fetch**
+- Fetch is `async` with `httpx.AsyncClient` (already a pinned dependency, as in `tailoring/llm/`): a synchronous fetch would block the shared service for the whole run's boards and pauses.
+- `GreenhousePosting` now matches the real Greenhouse job (nested `location`, no `raw` key); fetch passes jobs through untouched and reshape picks the fields — supersedes fetch flattening `location` and attaching `raw` (10-22), and the separate "pick" function agreed 10-23. Reshape wraps the job as `raw = {"greenhouse": job}` for now; the user will settle `raw`'s shape when adding other ATSs (README left at "the untouched job object" by the user's choice). Verified on the gitlab fixture: 232 postings, only `employment_type` `None`.
+- Tests deferred by the user ("not now"), not dropped.
+
 ## Open questions
 
 - **`review_gate/`** — designed 2026-10-08 (see `review_gate/README.md`), not built. No longer the fix for `BACKLOG.md`'s FIX NOW item (2026-10-13); when to build it is undecided.
