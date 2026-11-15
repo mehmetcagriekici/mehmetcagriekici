@@ -131,6 +131,7 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - `GreenhousePosting` now matches the real Greenhouse job (nested `location`, no `raw` key); fetch passes jobs through untouched and reshape picks the fields — supersedes fetch flattening `location` and attaching `raw` (10-22), and the separate "pick" function agreed 10-23. Reshape wraps the job as `raw = {"greenhouse": job}` for now; the user will settle `raw`'s shape when adding other ATSs (README left at "the untouched job object" by the user's choice). Verified on the gitlab fixture: 232 postings, only `employment_type` `None`.
 - Tests deferred by the user ("not now"), not dropped.
 - Greenhouse `fetch(board)` written (by the user): `raise_for_status()`, then a plain `if` that the body is a dict with a `jobs` list (not `assert` — stripped under `python -O`, and the response is outside data, not an invariant); `httpx.HTTPError` and `ValueError` caught by name, each returning a `FETCH_FAILED` skip. URL builders in `sourcing/constants/urls.py`. Verified live: gitlab → 251 jobs → 251 postings; a nonexistent board → `FETCH_FAILED`.
+- Normalize started (by the user, 11-15): returns `tuple[list[Posting], list[Skip]]`; `MISSING_FIELD` check against `REQUIRED_FIELDS`. Still open: the `MISSING_KEY` check (`Posting.__required_keys__ - post.keys()`, before indexing), the skip's `what`/`detail` (currently placeholders), HTML → text (built-in `html.parser` vs. `beautifulsoup4`, undecided), the stale filter.
 
 ## Open questions
 
