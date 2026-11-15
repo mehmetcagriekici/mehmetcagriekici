@@ -79,7 +79,7 @@ Required `None` is what normalize skips (`MISSING_FIELD`).
 |---|---|---|
 | `what` | `str` — the board slug or the posting id | `"acme"`, `"greenhouse:gitlab:8860302002"` |
 | `reason` | `SkipReason` | `SkipReason.STALE` |
-| `detail` | `str` — free text, shown in the report | `"404"`, `"company"`, `"41 days"` |
+| `detail` | `str` — free text, shown in the report | `"http error"`, `"company"`, `"41 days"` |
 
 No `step` field: each reason comes from exactly one step, so it would only repeat the reason.
 
@@ -133,6 +133,6 @@ No placeholder values: a value that's missing or failed to parse is `None` (or t
 
 - **Stale filter:** postings older than 30 days (by `posted_at`) are dropped and reported as "skipped (stale)" in the end-of-run report. It's the only filter sourcing applies — role/location/tech fit is decided entirely by `matching/`.
 - **Pacing:** a fixed ~1–2 s delay between company boards (20–50 requests per run).
-- **Errors:** a board that fails to fetch (e.g. a 404 after a rename) is skipped and reported ("board fetch failed: acme (404)"); a single posting that can't be normalized (e.g. a required field is `None`) is skipped and reported while the rest of its board proceeds. Nothing is auto-disabled — a repeating failure in the report is the user's cue to fix the entry.
+- **Errors:** a board that fails to fetch (e.g. a 404 after a rename) is skipped and reported ("board fetch failed: acme (http error)" — Greenhouse's fetch doesn't distinguish a 404 from a timeout: `"http error"`, `"invalid json"` or `"no job list"`); a single posting that can't be normalized (e.g. a required field is `None`) is skipped and reported while the rest of its board proceeds. Nothing is auto-disabled — a repeating failure in the report is the user's cue to fix the entry.
 
 In progress — no code yet; the Greenhouse adapter comes first. Starter company list: gitlab, adyen, doctolib, celonis, n26, sumup, hellofresh, contentful, monzo, getyourguide, trivago. See `../CLAUDE.md` for the decision history.
