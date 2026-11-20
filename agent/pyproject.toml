@@ -12,11 +12,13 @@ dependencies = [
     # parsed JSON against its pydantic models (Resume, CoverLetterDraft) before rendering
     "pydantic",
 
-    # sourcing — not yet implemented
+    # sourcing — normalize/normalize.py: posting description HTML -> plain text
+    "beautifulsoup4",
 
     # tailoring — llm/client.py: local Ollama chat calls
     "ollama",
-    # tailoring — llm/client.py: catches httpx's transport/timeout errors
+    # tailoring — llm/client.py: catches httpx's transport/timeout errors;
+    # sourcing — fetch/greenhouse/fetch.py: async board fetches
     # (already installed as an ollama dependency; declared since it's used directly)
     "httpx",
     # tailoring — write/write.py: Chromium print-to-PDF via Playwright
@@ -40,7 +42,7 @@ build-backend = "setuptools.build_meta"
 # (source_of_truth/, sourcing/, venv/, ...) that setuptools' flat-layout
 # auto-discovery would otherwise refuse to guess around.
 [tool.setuptools.packages.find]
-include = ["matching*", "tailoring*"]
+include = ["matching*", "tailoring*", "sourcing*"]
 
 # the Jinja2 templates write/write.py renders -- not Python, so they have to be
 # declared to ship with a non-editable install (e.g. the Docker image)
@@ -57,7 +59,7 @@ extend-exclude = ["venv"]
 select = ["F", "E", "W", "I"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["matching", "tailoring"]
+known-first-party = ["matching", "tailoring", "sourcing"]
 
 [tool.ruff.lint.per-file-ignores]
 # prompt text is sent to the LLM verbatim -- wrapping these string literals

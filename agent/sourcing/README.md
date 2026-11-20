@@ -23,7 +23,7 @@ There's no display-name field: the company's real name comes from the ATS respon
 ## Structure
 
 - **`fetch/`** — one adapter per ATS, in its own subfolder (`fetch/greenhouse/`); all of that ATS's logic lives there and nowhere else (its response type lives with the other types, below). Each adapter is two functions: a thin **fetch** (the HTTP call and JSON parsing; a failed request or a broken response — invalid JSON, no job list — is a `FETCH_FAILED` skip for the board) and a pure **reshape** (the ATS's job list + board slug → `list[Posting]`, nothing else; fetch unwraps the response, so reshape never sees ATS wrappers like Greenhouse's `meta`). Reshape loops over the jobs and never skips or raises on bad input: a missing key, a `None`, or a value it can't parse becomes `None` (read with `.get()`, transformed only when present, a third-party parse error caught by name), and normalize skips and reports the posting. Reshape does no I/O, so tests feed it a saved response (`tests/fixtures/greenhouse/gitlab_jobs.json`).
-- **`normalize/`** — shared cleanup, no per-ATS code: HTML → text, the key/required-field check, the stale filter.
+- **`normalize/`** — shared cleanup, no per-ATS code. Per posting, in order, each failure skipping it with no further checks: missing keys (`Posting.__required_keys__`, `MISSING_KEY`); required fields `None` (`REQUIRED_FIELDS`, `MISSING_FIELD`); `posted_at` without a timezone (`MISSING_FIELD` — comparing it with an aware "now" would raise, and guessing UTC would be a placeholder); older than 30 days (`STALE`); then `description` HTML → text with BeautifulSoup (`html.parser`, `get_text("\n", strip=True)` — the separator is what puts each bullet on its own line; plain `.text` runs `<li>`s together on compact HTML).
 - **`custom_types/posting.py`** — every type, shared or per-ATS (see Types).
 - **`constants/urls.py`** — one URL builder per ATS, taking the board slug (`greenhouse_jobs(board)` → `…/boards/{board}/jobs?content=true`). `constants/constants.py` holds `REQUIRED_FIELDS`, the required list from Types below, which normalize checks.
 - **Reporting** — fetch and normalize each return their results plus a list of `Skip`s; the runner joins them into the end-of-run report. No shared collector object.
@@ -89,7 +89,7 @@ No `step` field: each reason comes from exactly one step, so it would only repea
 |---|---|---|
 | `FETCH_FAILED` | fetch | request failed or response broken (invalid JSON, no job list) |
 | `MISSING_KEY` | normalize | a posting lacks a key — an adapter bug |
-| `MISSING_FIELD` | normalize | a required field is `None` |
+| `MISSING_FIELD` | normalize | a required field is `None`, or `posted_at` has no timezone |
 | `STALE` | normalize | `posted_at` older than 30 days |
 
 ## Normalized posting
