@@ -10,3 +10,5 @@ REQUIRED_FIELDS = (
         "posted_at",
         "raw",
         )
+
+WAIT_TIME = 1.5

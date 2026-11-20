@@ -1,6 +1,6 @@
 # Job-application automation project
 
-- We are designing and building an automated AI agent to apply to jobs for the user, inside this folder (`agent/`). `matching/` and `tailoring/` have working code; the rest is design (see Status).
+- We are designing and building an automated AI agent to apply to jobs for the user, inside this folder (`agent/`). `sourcing/` (Greenhouse), `matching/` and `tailoring/` have working code; the rest is design (see Status).
 - **No code.** Do not write, scaffold, or edit any code for this project unless the user explicitly asks for code to be written. Default mode is discussion/design only.
 - Act as a rubber duck: help the user think through the design out loud, ask clarifying questions, poke at assumptions and edge cases — don't jump to solutions or implementation.
 - This constraint applies specifically to the agent-building project itself, not to the existing cover-letter/resume workflow at the repo root, which continues as-is and is governed by the root `CLAUDE.md`.
@@ -26,8 +26,7 @@
 
 ## Status
 
-- **Built, in use (code, committed):** `source_of_truth/` (data), `matching/`, `tailoring/`. Tests in `tests/` (pytest: gap rules, `fit_facts()`) are the user's to write.
-- **In progress:** `sourcing/` — next to build, starting with the Greenhouse adapter.
+- **Built, in use (code, committed):** `source_of_truth/` (data), `sourcing/` (Greenhouse only; Ashby next), `matching/`, `tailoring/`. Tests in `tests/` (pytest: gap rules, `fit_facts()`) are the user's to write.
 - **Design only (README, no code):** `form_automation/`, `tracking/`, `review_gate/`, and the runner that ties the pipeline together (ranking, cap, stopping on infrastructure failures, re-check before submit).
 
 ## Decision log
@@ -134,6 +133,9 @@ Dates are when a decision was made; where a later entry supersedes an earlier on
 - Normalize started (by the user, 11-15): returns `tuple[list[Posting], list[Skip]]`; `MISSING_FIELD` check against `REQUIRED_FIELDS`. Still open: the `MISSING_KEY` check (`Posting.__required_keys__ - post.keys()`, before indexing), the skip's `what`/`detail` (currently placeholders), HTML → text (built-in `html.parser` vs. `beautifulsoup4`, undecided), the stale filter.
 - Normalize finished (11-20): `MISSING_KEY` kept separate from `MISSING_FIELD` (the user's choice, for the extra information — an adapter bug vs. missing ATS data). HTML → text with `beautifulsoup4` (`html.parser`, newline separator). A `posted_at` without a timezone is skipped as `MISSING_FIELD`, not assumed UTC — resolves the `BACKLOG.md` naive-date item. Type-checker-only guards (`or " "`, `is not None`) kept where Pyright can't follow the `REQUIRED_FIELDS` check. Verified live: gitlab 246 → 114 kept, 132 `STALE`. The 10-21 gitlab fixture is now entirely stale — tests will need a fixed "now".
 - Company list written as `sourcing/companies.json` (by Claude, at the user's request — hand-typed JSON risks typos). All 11 starter boards fetched live first: 9 return jobs (kept 8–167 each after the stale filter); doctolib fails (http error) and getyourguide has an empty Greenhouse board — both turned out to be on Ashby (Lever 404s for both), so they're listed as `ashby`, disabled until an Ashby adapter exists.
+- `source(ats)` written (by the user, 11-20) in `sourcing/source.py`: an `adapters` dict in that file (moved there from `constants/`), `ValueError` for an unknown ATS (not caught inside `source()` — a misconfigured instance should stop the run, not end it quietly with nothing), a failed board's `Skip` then `continue`, `companies.json` re-read per call, `await asyncio.sleep(1.5)` between boards. Verified live: 595 postings from 9 boards in 8 s on a normal connection.
+- Timeout: httpx's 5 s default kept (the user's call). On 2026-11-20's slow network a connect took ~36 s and 8 of 9 boards failed as `FETCH_FAILED`; accepted — they come back next run. Considered: `timeout=60`.
+- **Sourcing marked built for Greenhouse.** Next adapter: Ashby (doctolib, getyourguide), before Lever.
 
 ## Open questions
 
