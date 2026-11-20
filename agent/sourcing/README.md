@@ -8,7 +8,7 @@ Pulls job listings from ATS-backed career pages (Greenhouse, Lever, Ashby, Workd
 
 ATS public APIs are per-company — Greenhouse `boards/{board}/jobs`, Lever `postings/{board}`, Ashby `job-board/{board}`; Workday has no public API at all — so there's no feed of every job on an ATS. Each instance polls a list of companies on its ATS.
 
-The list is hand-maintained, in its own JSON file in this folder, shared by all instances (each reads the entries for its own ATS):
+The list is hand-maintained, in `companies.json` in this folder, shared by all instances (each reads the entries for its own ATS):
 
 ```json
 [{ "ats": "greenhouse", "board": "acme", "enabled": true, "note": "Go backend, remote EU" }]
@@ -135,4 +135,4 @@ No placeholder values: a value that's missing or failed to parse is `None` (or t
 - **Pacing:** a fixed ~1–2 s delay between company boards (20–50 requests per run).
 - **Errors:** a board that fails to fetch (e.g. a 404 after a rename) is skipped and reported ("board fetch failed: acme (http error)" — Greenhouse's fetch doesn't distinguish a 404 from a timeout: `"http error"`, `"invalid json"` or `"no job list"`); a single posting that can't be normalized (e.g. a required field is `None`) is skipped and reported while the rest of its board proceeds. Nothing is auto-disabled — a repeating failure in the report is the user's cue to fix the entry.
 
-In progress — no code yet; the Greenhouse adapter comes first. Starter company list: gitlab, adyen, doctolib, celonis, n26, sumup, hellofresh, contentful, monzo, getyourguide, trivago. See `../CLAUDE.md` for the decision history.
+In progress — the Greenhouse adapter (fetch, reshape) and normalize are built; the runner side (reading `companies.json`, pacing, joining skips) is not. Starter list checked live 2026-11-20: 9 of 11 boards return jobs; doctolib and getyourguide turned out to be on Ashby — listed as `ashby`, disabled until the Ashby adapter exists. See `../CLAUDE.md` for the decision history.

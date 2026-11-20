@@ -1,0 +1,13 @@
+[
+  { "ats": "greenhouse", "board": "gitlab", "enabled": true, "note": "" },
+  { "ats": "greenhouse", "board": "adyen", "enabled": true, "note": "" },
+  { "ats": "ashby", "board": "doctolib", "enabled": false, "note": "On Ashby (checked 2026-11-20; its Greenhouse board fails) — enable once the Ashby adapter exists" },
+  { "ats": "greenhouse", "board": "celonis", "enabled": true, "note": "" },
+  { "ats": "greenhouse", "board": "n26", "enabled": true, "note": "" },
+  { "ats": "greenhouse", "board": "sumup", "enabled": true, "note": "" },
+  { "ats": "greenhouse", "board": "hellofresh", "enabled": true, "note": "" },
+  { "ats": "greenhouse", "board": "contentful", "enabled": true, "note": "" },
+  { "ats": "greenhouse", "board": "monzo", "enabled": true, "note": "" },
+  { "ats": "ashby", "board": "getyourguide", "enabled": false, "note": "On Ashby (checked 2026-11-20; its Greenhouse board is empty) — enable once the Ashby adapter exists" },
+  { "ats": "greenhouse", "board": "trivago", "enabled": true, "note": "" }
+]
